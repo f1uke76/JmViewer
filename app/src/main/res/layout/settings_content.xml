@@ -285,7 +285,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowExport"
+            android:id="@+id/rowImportExport"
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:orientation="horizontal"
@@ -300,7 +300,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/export_entries"
+                android:text="@string/import_export"
                 android:textColor="@color/on_surface"
                 android:textSize="15sp" />
 
@@ -312,7 +312,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowImport"
+            android:id="@+id/rowAbout"
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:orientation="horizontal"
@@ -327,25 +327,32 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/import_entries"
+                android:text="@string/about_app"
                 android:textColor="@color/on_surface"
                 android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/aboutVersionValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
+
+            <View
+                android:id="@+id/aboutDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_dot_red"
+                android:visibility="gone" />
 
             <ImageView
                 android:layout_width="20dp"
                 android:layout_height="20dp"
+                android:layout_marginStart="4dp"
                 android:src="@drawable/ic_chevron"
                 android:contentDescription="@null" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/versionValue"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="24dp"
-            android:textColor="@color/muted"
-            android:textSize="12sp" />
 
         <TextView
             android:layout_width="match_parent"

@@ -290,6 +290,19 @@
                 android:visibility="gone">
 
                 <ImageView
+                    android:id="@+id/btnSelAll"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_marginBottom="12dp"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_select_all"
+                    android:tint="@color/white"
+                    android:background="@drawable/bg_circle_primary"
+                    android:contentDescription="@string/select_all"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <ImageView
                     android:id="@+id/btnSelStart"
                     android:layout_width="60dp"
                     android:layout_height="60dp"

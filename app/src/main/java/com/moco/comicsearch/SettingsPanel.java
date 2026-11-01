@@ -1,26 +1,16 @@
 package com.moco.comicsearch;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatDelegate;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /** 设置面板：可内嵌在主页的「设置」分区，也可被独立设置页复用。 */
@@ -41,12 +31,10 @@ public class SettingsPanel {
     private final TextView viewModeValue;
     private final TextView siteValue;
     private final TextView cacheManageValue;
-    private final TextView versionValue;
+    private final TextView aboutVersionValue;
+    private final View aboutDot;
     private final PillSwitch swHomeRecommend;
     private boolean updating;
-
-    private ActivityResultLauncher<String> exportLauncher;
-    private ActivityResultLauncher<String[]> importLauncher;
 
     public SettingsPanel(androidx.appcompat.app.AppCompatActivity activity, View root, Listener listener) {
         this.activity = activity;
@@ -60,7 +48,8 @@ public class SettingsPanel {
         viewModeValue = root.findViewById(R.id.viewModeValue);
         siteValue = root.findViewById(R.id.siteValue);
         cacheManageValue = root.findViewById(R.id.cacheManageValue);
-        versionValue = root.findViewById(R.id.versionValue);
+        aboutVersionValue = root.findViewById(R.id.aboutVersionValue);
+        aboutDot = root.findViewById(R.id.aboutDot);
         swHomeRecommend = root.findViewById(R.id.swHomeRecommend);
 
         root.findViewById(R.id.rowTheme).setOnClickListener(v -> showThemeDialog());
@@ -71,10 +60,10 @@ public class SettingsPanel {
         root.findViewById(R.id.rowCacheManage).setOnClickListener(v ->
                 activity.startActivity(new Intent(activity, CacheActivity.class)));
         root.findViewById(R.id.rowClearRecords).setOnClickListener(v -> showClearRecordsDialog());
-        root.findViewById(R.id.rowExport).setOnClickListener(v ->
-                exportLauncher.launch("JmViewer-entries.json"));
-        root.findViewById(R.id.rowImport).setOnClickListener(v ->
-                importLauncher.launch(new String[]{"application/json", "text/plain", "*/*"}));
+        root.findViewById(R.id.rowImportExport).setOnClickListener(v ->
+                activity.startActivity(new Intent(activity, ImportExportActivity.class)));
+        root.findViewById(R.id.rowAbout).setOnClickListener(v ->
+                activity.startActivity(new Intent(activity, AboutActivity.class)));
 
         root.findViewById(R.id.rowHomeRecommend).setOnClickListener(v ->
                 swHomeRecommend.setChecked(!swHomeRecommend.isChecked(), true));
@@ -87,48 +76,6 @@ public class SettingsPanel {
                 listener.onSettingsChanged();
             }
         });
-
-        exportLauncher = activity.registerForActivityResult(
-                new ActivityResultContracts.CreateDocument("application/json"), uri -> {
-                    if (uri == null) {
-                        return;
-                    }
-                    try (OutputStream os = activity.getContentResolver().openOutputStream(uri)) {
-                        if (os == null) {
-                            throw new java.io.IOException("no stream");
-                        }
-                        os.write(buildExport().getBytes(StandardCharsets.UTF_8));
-                        Toast.makeText(activity, R.string.export_ok, Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        Toast.makeText(activity, R.string.export_fail, Toast.LENGTH_SHORT).show();
-                    }
-                });
-
-        importLauncher = activity.registerForActivityResult(
-                new ActivityResultContracts.OpenDocument(), uri -> {
-                    if (uri == null) {
-                        return;
-                    }
-                    try (InputStream is = activity.getContentResolver().openInputStream(uri)) {
-                        if (is == null) {
-                            throw new java.io.IOException("no stream");
-                        }
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        byte[] buf = new byte[8192];
-                        int n;
-                        while ((n = is.read(buf)) > 0) {
-                            bos.write(buf, 0, n);
-                        }
-                        applyImport(new String(bos.toByteArray(), StandardCharsets.UTF_8));
-                        Toast.makeText(activity, R.string.import_ok, Toast.LENGTH_SHORT).show();
-                        refresh();
-                        if (listener != null) {
-                            listener.onSettingsChanged();
-                        }
-                    } catch (Exception e) {
-                        Toast.makeText(activity, R.string.import_fail, Toast.LENGTH_SHORT).show();
-                    }
-                });
 
         refresh();
     }
@@ -158,8 +105,11 @@ public class SettingsPanel {
         if (cacheManageValue != null) {
             cacheManageValue.setText(String.format(Locale.ROOT, "%.1f MB", size / 1024f / 1024f));
         }
-        if (versionValue != null) {
-            versionValue.setText(activity.getString(R.string.version_label, BuildConfig.VERSION_NAME));
+        if (aboutVersionValue != null) {
+            aboutVersionValue.setText(BuildConfig.VERSION_NAME);
+        }
+        if (aboutDot != null) {
+            aboutDot.setVisibility(UpdateChecker.hasUpdate() ? View.VISIBLE : View.GONE);
         }
         if (swHomeRecommend != null) {
             updating = true;
@@ -305,33 +255,6 @@ public class SettingsPanel {
                 })
                 .setNegativeButton(R.string.cancel, null)
                 .show();
-    }
-
-    private String buildExport() {
-        try {
-            JSONObject root = new JSONObject();
-            root.put("app", "JmViewer");
-            root.put("version", 1);
-            root.put("favorites", new JSONArray(store.rawFavorites()));
-            root.put("readHistory", new JSONArray(store.rawReadHistory()));
-            root.put("searchHistory", new JSONArray(prefs.rawSearchHistory()));
-            return root.toString(2);
-        } catch (Exception e) {
-            return "{}";
-        }
-    }
-
-    private void applyImport(String json) throws Exception {
-        JSONObject root = new JSONObject(json);
-        if (root.has("favorites")) {
-            store.putRawFavorites(root.getJSONArray("favorites").toString());
-        }
-        if (root.has("readHistory")) {
-            store.putRawReadHistory(root.getJSONArray("readHistory").toString());
-        }
-        if (root.has("searchHistory")) {
-            prefs.putRawSearchHistory(root.getJSONArray("searchHistory").toString());
-        }
     }
 
     private static long dirSize(File dir) {

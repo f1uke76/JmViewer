@@ -27,6 +27,7 @@ public class Prefs {
     private static final String KEY_HOME_REC = "home_recommend";
     private static final String KEY_ACCENT = "theme_accent";
     private static final String KEY_ICON_REFRESH = "icon_refresh_version";
+    private static final String KEY_AUTO_UPDATE = "auto_check_update";
 
     private static final int MAX_HISTORY = 15;
 
@@ -108,6 +109,15 @@ public class Prefs {
 
     public void setIconRefreshVersion(int code) {
         sp.edit().putInt(KEY_ICON_REFRESH, code).apply();
+    }
+
+    /** 启动时是否检查更新，默认开启。 */
+    public boolean autoCheckUpdate() {
+        return sp.getBoolean(KEY_AUTO_UPDATE, true);
+    }
+
+    public void setAutoCheckUpdate(boolean on) {
+        sp.edit().putBoolean(KEY_AUTO_UPDATE, on).apply();
     }
 
     public void setAdBlock(boolean on) {

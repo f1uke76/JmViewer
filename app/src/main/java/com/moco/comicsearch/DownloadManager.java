@@ -202,6 +202,8 @@ public class DownloadManager {
         if (t.state != 1) {
             t.state = 0;
         }
+        // 保存完整元信息（标签、页数等），下载完成后与收藏页展示一致
+        new Store(ctx).saveAlbum(album);
         save(all);
         notifyChanged();
     }
@@ -264,6 +266,10 @@ public class DownloadManager {
                 if (t.cover.isEmpty()) {
                     t.cover = a.cover;
                 }
+                if (a.id == null || a.id.isEmpty()) {
+                    a.id = t.albumId;
+                }
+                new Store(ctx).saveAlbum(a);
                 update(t);
             }
             if (chapterId.isEmpty()) {
@@ -279,11 +285,15 @@ public class DownloadManager {
 
             // 把详情元信息与章节信息写入缓存，详情页 / 阅读器可离线命中
             Store store = new Store(ctx);
-            Models.Album album = new Models.Album();
-            album.id = t.albumId;
-            album.title = t.title;
-            album.cover = t.cover;
+            Models.Album album = store.getCachedAlbum(t.albumId);
+            if (album == null) {
+                album = new Models.Album();
+                album.id = t.albumId;
+                album.title = t.title;
+                album.cover = t.cover;
+            }
             album.readId = chapterId;
+            album.chapters.clear();
             Models.Chapter ch = new Models.Chapter();
             ch.id = chapterId;
             ch.name = "开始阅读";

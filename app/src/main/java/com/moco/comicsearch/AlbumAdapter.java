@@ -139,11 +139,12 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             if (selectionMode) {
                 h.check.setVisibility(View.VISIBLE);
                 boolean sel = selectedIds != null && selectedIds.contains(a.id);
-                h.check.setAlpha(sel ? 1f : 0.3f);
-                h.check.setColorFilter(sel
-                        ? ThemeManager.primary(h.itemView.getContext())
+                h.check.setAlpha(sel ? 1f : 0.55f);
+                h.check.setColorFilter(grid
+                        ? 0xFFFFFFFF
+                        : (sel ? ThemeManager.primary(h.itemView.getContext())
                         : androidx.core.content.ContextCompat.getColor(
-                                h.itemView.getContext(), R.color.muted));
+                                h.itemView.getContext(), R.color.muted)));
             } else {
                 h.check.setVisibility(View.GONE);
             }
@@ -171,15 +172,28 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             h.meta.setText(meta);
         }
 
+        boolean downloading = showProgress && a.progress >= 0;
         if (h.tags != null) {
-            h.tags.removeAllViews();
-            int shown = 0;
-            for (String tag : a.tags) {
-                if (shown >= 3) {
-                    break;
+            // 下载中不显示标签，用进度条/圆环代替；完成后恢复标签
+            h.tags.setVisibility(downloading ? View.GONE : View.VISIBLE);
+            if (!downloading) {
+                h.tags.removeAllViews();
+                int shown = 0;
+                for (String tag : a.tags) {
+                    if (shown >= 3) {
+                        break;
+                    }
+                    h.tags.addView(chip(h.tags, tag));
+                    shown++;
                 }
-                h.tags.addView(chip(h.tags, tag));
-                shown++;
+            }
+        }
+        if (h.downloadRing != null) {
+            if (grid && downloading) {
+                h.downloadRing.setVisibility(View.VISIBLE);
+                h.downloadRing.setProgress(a.progress);
+            } else {
+                h.downloadRing.setVisibility(View.GONE);
             }
         }
 
@@ -294,6 +308,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         ImageView btnTrash;
         ImageView btnDownload;
         ProgressBar downloadProgress;
+        RingProgressView downloadRing;
 
         VH(@NonNull View v) {
             super(v);
@@ -306,6 +321,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             btnTrash = v.findViewById(R.id.btnTrash);
             btnDownload = v.findViewById(R.id.btnDownload);
             downloadProgress = v.findViewById(R.id.downloadProgress);
+            downloadRing = v.findViewById(R.id.downloadRing);
         }
     }
 }

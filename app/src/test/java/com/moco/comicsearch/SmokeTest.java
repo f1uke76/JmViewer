@@ -107,8 +107,19 @@ public class SmokeTest {
         assertNotNull(a.findViewById(R.id.rowHomeRecommend));
         assertNotNull(a.findViewById(R.id.rowCacheManage));
         assertNotNull(a.findViewById(R.id.rowClearRecords));
-        assertNotNull(a.findViewById(R.id.rowExport));
-        assertNotNull(a.findViewById(R.id.rowImport));
+        assertNotNull(a.findViewById(R.id.rowImportExport));
+        assertNotNull(a.findViewById(R.id.rowAbout));
+        c.pause().stop().destroy();
+    }
+
+    @Test
+    public void about_activity_inflates() {
+        ActivityController<AboutActivity> c =
+                Robolectric.buildActivity(AboutActivity.class).setup();
+        Activity a = c.get();
+        assertNotNull(a.findViewById(R.id.versionValue));
+        assertNotNull(a.findViewById(R.id.notesView));
+        assertNotNull(a.findViewById(R.id.swAutoCheck));
         c.pause().stop().destroy();
     }
 

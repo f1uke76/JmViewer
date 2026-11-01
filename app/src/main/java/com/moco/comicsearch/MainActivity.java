@@ -8,6 +8,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.Editable;
@@ -75,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private HamburgerDrawable headerMorph;
     private ImageView searchFab;
     private View selectionBar;
-    private View btnSelStart, btnSelPause, btnSelDelete;
+    private View btnSelAll, btnSelStart, btnSelPause, btnSelDelete;
     private boolean selectionMode = false;
     private boolean selectionUiShown = false;
     private final java.util.Set<String> selectedIds = new java.util.HashSet<>();
@@ -141,6 +142,42 @@ public class MainActivity extends AppCompatActivity {
         int start = savedInstanceState == null
                 ? SEC_HOME : savedInstanceState.getInt("section", SEC_HOME);
         showSection(start);
+        maybeCheckUpdate();
+    }
+
+    /** 启动时静默检查更新：开关打开且有新版本时弹窗，关闭时只在关于页留红点。 */
+    private void maybeCheckUpdate() {
+        UpdateChecker.check(this, r -> {
+            if (settingsPanel != null) {
+                settingsPanel.refresh();
+            }
+            if (isFinishing() || r == null || !r.ok || !r.newer) {
+                return;
+            }
+            if (!prefs.autoCheckUpdate()) {
+                return;
+            }
+            String v = "v" + r.version;
+            if (v.equals(UpdateChecker.promptedVersion)) {
+                return;
+            }
+            UpdateChecker.promptedVersion = v;
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(getString(R.string.update_available, v))
+                    .setMessage(getString(R.string.update_available_msg,
+                            BuildConfig.VERSION_NAME, r.version))
+                    .setPositiveButton(R.string.go_update, (d, w) -> openUrl(r.url))
+                    .setNegativeButton(R.string.later, null)
+                    .show();
+        });
+    }
+
+    private void openUrl(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception e) {
+            Ui.toast(this, getString(R.string.browser_open_failed));
+        }
     }
 
     private void bindViews() {
@@ -161,6 +198,7 @@ public class MainActivity extends AppCompatActivity {
                 getResources().getDisplayMetrics().density);
         searchFab = findViewById(R.id.searchFab);
         selectionBar = findViewById(R.id.selectionBar);
+        btnSelAll = findViewById(R.id.btnSelAll);
         btnSelStart = findViewById(R.id.btnSelStart);
         btnSelPause = findViewById(R.id.btnSelPause);
         btnSelDelete = findViewById(R.id.btnSelDelete);
@@ -191,6 +229,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         searchFab.setOnClickListener(v -> expandSearch());
+        btnSelAll.setOnClickListener(v -> selectAll());
         btnSelStart.setOnClickListener(v -> startSelected());
         btnSelPause.setOnClickListener(v -> pauseSelected());
         btnSelDelete.setOnClickListener(v -> deleteSelected());
@@ -588,12 +627,9 @@ public class MainActivity extends AppCompatActivity {
         }
         if (which == SEC_DOWNLOAD) {
             adapter.setShowProgress(true);
-            adapter.setShowTrash(true);
+            adapter.setShowTrash(false);
             adapter.setShowDownload(true);
-            adapter.setGrid(false);
-            if (!(list.getLayoutManager() instanceof LinearLayoutManager)) {
-                list.setLayoutManager(new LinearLayoutManager(this));
-            }
+            applyViewMode();
             adapter.submit(downloadAlbums());
             return;
         }
@@ -799,6 +835,14 @@ public class MainActivity extends AppCompatActivity {
             a.progress = t.state == 3 ? -1 : t.progress();
             a.downloadState = t.state;
             a.extra = t.state == 3 ? "" : (t.done + "/" + (t.total > 0 ? t.total : "?"));
+            if (t.state == 3) {
+                // 下载完成后恢复成和收藏页一致的标签展示
+                Models.Album cached = store.getCachedAlbum(t.albumId);
+                if (cached != null) {
+                    a.pages = cached.pages;
+                    a.tags.addAll(cached.tags);
+                }
+            }
             out.add(a);
         }
         return out;
@@ -823,9 +867,28 @@ public class MainActivity extends AppCompatActivity {
         if (album == null || album.id == null || album.id.isEmpty()) {
             return;
         }
+        if (section == SEC_PROFILE) {
+            return;
+        }
         selectionMode = true;
         selectedIds.clear();
         selectedIds.add(album.id);
+        applySelectionUi();
+    }
+
+    private void selectAll() {
+        if (adapter == null || !selectionMode) {
+            return;
+        }
+        selectedIds.clear();
+        for (Models.Album a : adapter.items()) {
+            if (a.id != null && !a.id.isEmpty()) {
+                selectedIds.add(a.id);
+            }
+        }
+        if (selectedIds.isEmpty()) {
+            return;
+        }
         applySelectionUi();
     }
 
@@ -857,6 +920,7 @@ public class MainActivity extends AppCompatActivity {
             adapter.setSelectedIds(selectedIds);
         }
         boolean download = section == SEC_DOWNLOAD;
+        btnSelAll.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         btnSelStart.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
         btnSelPause.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
         if (selectionMode != selectionUiShown) {
@@ -887,9 +951,10 @@ public class MainActivity extends AppCompatActivity {
             selectionBar.setVisibility(View.VISIBLE);
             selectionBar.setAlpha(1f);
             selectionBar.setTranslationY(0f);
-            animateSelButton(btnSelStart, 0);
-            animateSelButton(btnSelPause, 55);
-            animateSelButton(btnSelDelete, 110);
+            animateSelButton(btnSelAll, 0);
+            animateSelButton(btnSelStart, 55);
+            animateSelButton(btnSelPause, 110);
+            animateSelButton(btnSelDelete, 165);
         } else {
             selectionBar.animate().alpha(0f).translationY(dp(70)).setDuration(160)
                     .setInterpolator(new AccelerateInterpolator())

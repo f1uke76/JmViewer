@@ -159,6 +159,14 @@
         <activity
             android:name=".CacheActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".AboutActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ImportExportActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
