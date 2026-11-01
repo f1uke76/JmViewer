@@ -60,7 +60,10 @@ public class ReaderActivity extends SwipeBackActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        EdgeToEdge.setupDark(this);
         setContentView(R.layout.activity_reader);
+        EdgeToEdge.padTop(findViewById(R.id.topBar));
+        EdgeToEdge.padBottom(findViewById(R.id.bottomBar));
 
         site = Site.get(this);
         store = new Store(this);

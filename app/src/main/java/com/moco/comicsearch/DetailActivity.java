@@ -45,7 +45,10 @@ public class DetailActivity extends SwipeBackActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        EdgeToEdge.setup(this);
         setContentView(R.layout.activity_detail);
+        EdgeToEdge.padTop(findViewById(R.id.header));
+        EdgeToEdge.padBottom(findViewById(R.id.content));
 
         site = Site.get(this);
         store = new Store(this);

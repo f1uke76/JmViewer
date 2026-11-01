@@ -21,7 +21,10 @@ public class AboutActivity extends SwipeBackActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        EdgeToEdge.setup(this);
         setContentView(R.layout.activity_about);
+        EdgeToEdge.padTop(findViewById(R.id.header));
+        EdgeToEdge.padBottom(findViewById(R.id.root));
         prefs = new Prefs(this);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());

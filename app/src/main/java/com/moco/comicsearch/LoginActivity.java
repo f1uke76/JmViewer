@@ -28,7 +28,9 @@ public class LoginActivity extends SwipeBackActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        EdgeToEdge.setup(this);
         setContentView(R.layout.activity_login);
+        EdgeToEdge.padVertical(findViewById(R.id.root));
 
         site = Site.get(this);
         inputUser = findViewById(R.id.inputUser);

@@ -123,8 +123,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        EdgeToEdge.setup(this);
         IconSwitcher.apply(this);
         setContentView(R.layout.activity_main);
+        EdgeToEdge.padTop(findViewById(R.id.header));
+        EdgeToEdge.padBottom(findViewById(R.id.contentFrame));
+        EdgeToEdge.padVertical(findViewById(R.id.drawerContent));
 
         site = Site.get(this);
         prefs = new Prefs(this);

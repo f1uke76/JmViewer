@@ -33,7 +33,10 @@ public class CacheActivity extends SwipeBackActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        EdgeToEdge.setup(this);
         setContentView(R.layout.activity_cache);
+        EdgeToEdge.padTop(findViewById(R.id.header));
+        EdgeToEdge.padBottom(findViewById(R.id.root));
 
         loader = ImageLoader.get(this);
         store = new Store(this);

@@ -26,7 +26,10 @@ public class ImportExportActivity extends SwipeBackActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        EdgeToEdge.setup(this);
         setContentView(R.layout.activity_import_export);
+        EdgeToEdge.padTop(findViewById(R.id.header));
+        EdgeToEdge.padBottom(findViewById(R.id.root));
         store = new Store(this);
         prefs = new Prefs(this);
 

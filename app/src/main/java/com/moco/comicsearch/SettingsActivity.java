@@ -11,7 +11,10 @@ public class SettingsActivity extends SwipeBackActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        EdgeToEdge.setup(this);
         setContentView(R.layout.activity_settings);
+        EdgeToEdge.padTop(findViewById(R.id.header));
+        EdgeToEdge.padBottom(findViewById(R.id.root));
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         panel = new SettingsPanel(this, findViewById(android.R.id.content), null);

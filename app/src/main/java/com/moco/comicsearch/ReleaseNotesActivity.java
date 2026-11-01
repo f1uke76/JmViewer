@@ -14,7 +14,10 @@ public class ReleaseNotesActivity extends SwipeBackActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        EdgeToEdge.setup(this);
         setContentView(R.layout.activity_release_notes);
+        EdgeToEdge.padTop(findViewById(R.id.header));
+        EdgeToEdge.padBottom(findViewById(R.id.root));
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         TextView notesView = findViewById(R.id.notesView);
