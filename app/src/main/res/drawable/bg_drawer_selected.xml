@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 抽屉选中项：直角高亮块 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/primary_dim" />
+    <solid android:color="?attr/colorPrimaryContainer" />
 </shape>

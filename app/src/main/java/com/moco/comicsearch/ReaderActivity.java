@@ -59,6 +59,7 @@ public class ReaderActivity extends SwipeBackActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.apply(this);
         setContentView(R.layout.activity_reader);
 
         site = Site.get(this);

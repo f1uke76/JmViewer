@@ -95,7 +95,7 @@ public class PillSwitch extends View {
         float h = getHeight();
         float radius = h / 2f;
 
-        int on = ContextCompat.getColor(getContext(), R.color.primary);
+        int on = ThemeManager.primary(getContext());
         int off = ContextCompat.getColor(getContext(), R.color.divider);
         trackPaint.setColor(blend(off, on, fraction));
         rect.set(0, 0, w, h);

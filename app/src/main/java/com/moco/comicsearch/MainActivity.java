@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int SEC_HISTORY = 1;
     private static final int SEC_FAV = 2;
     private static final int SEC_PROFILE = 3;
+    private static final int SEC_SETTINGS = 4;
 
     private Site site;
     private Prefs prefs;
@@ -58,12 +59,13 @@ public class MainActivity extends AppCompatActivity {
     private SwipeDrawerLayout drawer;
     private View navHome, navHistory, navFav, navProfile, navSettings;
     private TextView drawerSite;
+    private TextView drawerVersion;
 
+    private ImageView btnHeader;
+    private TextView headerTitle;
+    private ImageView searchFab;
+    private View searchBarExpanded;
     private EditText searchInput;
-    private View searchBar;
-    private View pageBar;
-    private ImageView btnSearchAction;
-    private TextView barTitle;
     private SwipeRefreshLayout refresh;
     private RecyclerView list;
     private AlbumAdapter adapter;
@@ -74,6 +76,8 @@ public class MainActivity extends AppCompatActivity {
     private AlbumAdapter histAdapter;
     private SectionHeaderAdapter headerFav;
     private SectionHeaderAdapter headerHist;
+    private View settingsView;
+    private SettingsPanel settingsPanel;
     private View loading;
     private TextView emptyTitle;
     private TextView emptyMsg;
@@ -81,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout historyList;
     private WebView webView;
     private boolean webMode = false;
-    private boolean searchFocused = false;
+    private boolean searchExpanded = false;
 
     private int section = SEC_HOME;
     private String keyword = "";
@@ -97,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.apply(this);
         setContentView(R.layout.activity_main);
 
         site = Site.get(this);
@@ -109,9 +114,12 @@ public class MainActivity extends AppCompatActivity {
         setupSearch();
         setupList();
         setupProfile();
+        setupSettings();
         setupDrawer();
 
-        showSection(SEC_HOME);
+        int start = savedInstanceState == null
+                ? SEC_HOME : savedInstanceState.getInt("section", SEC_HOME);
+        showSection(start);
     }
 
     private void bindViews() {
@@ -122,17 +130,19 @@ public class MainActivity extends AppCompatActivity {
         navProfile = findViewById(R.id.navProfile);
         navSettings = findViewById(R.id.navSettings);
         drawerSite = findViewById(R.id.drawerSite);
+        drawerVersion = findViewById(R.id.drawerVersion);
 
+        btnHeader = findViewById(R.id.btnHeader);
+        headerTitle = findViewById(R.id.headerTitle);
+        searchFab = findViewById(R.id.searchFab);
+        searchBarExpanded = findViewById(R.id.searchBarExpanded);
         searchInput = findViewById(R.id.searchInput);
-        searchBar = findViewById(R.id.searchBar);
-        pageBar = findViewById(R.id.pageBar);
-        btnSearchAction = findViewById(R.id.btnSearchAction);
-        barTitle = findViewById(R.id.barTitle);
         refresh = findViewById(R.id.refresh);
         list = findViewById(R.id.list);
         emptyView = findViewById(R.id.emptyView);
         homeMark = findViewById(R.id.homeMark);
         profileList = findViewById(R.id.profileView);
+        settingsView = findViewById(R.id.settingsView);
         loading = findViewById(R.id.loading);
         emptyTitle = findViewById(R.id.emptyTitle);
         emptyMsg = findViewById(R.id.emptyMsg);
@@ -141,11 +151,21 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         setupWebView();
 
-        findViewById(R.id.btnMenu).setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
-        findViewById(R.id.btnMenuPage).setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
+        btnHeader.setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
+        searchFab.setOnClickListener(v -> expandSearch());
         drawerSite.setText(site.base().replace("https://", "").replace("http://", ""));
+        drawerVersion.setText("v" + BuildConfig.VERSION_NAME);
+        drawerSite.setOnClickListener(v -> MirrorPicker.show(this, m -> {
+            prefs.setBaseUrl("https://" + m.host);
+            drawerSite.setText(m.host);
+            homeLoaded = false;
+            homeAlbums.clear();
+            searchResults.clear();
+            keyword = "";
+            showSection(SEC_HOME);
+        }));
 
-        refresh.setColorSchemeColors(ContextCompat.getColor(this, R.color.primary));
+        refresh.setColorSchemeColors(ThemeManager.primary(this));
         refresh.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.surface2));
         refresh.setOnRefreshListener(() -> {
             if (section != SEC_HOME) {
@@ -168,27 +188,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupDrawer() {
-        navHome.setOnClickListener(v -> showSection(SEC_HOME));
-        navHistory.setOnClickListener(v -> showSection(SEC_HISTORY));
-        navFav.setOnClickListener(v -> showSection(SEC_FAV));
-        navProfile.setOnClickListener(v -> showSection(SEC_PROFILE));
-        navSettings.setOnClickListener(v -> {
-            drawer.closeDrawer(GravityCompat.START);
-            startActivity(new Intent(this, SettingsActivity.class));
-        });
+        navHome.setOnClickListener(v -> switchSection(SEC_HOME));
+        navHistory.setOnClickListener(v -> switchSection(SEC_HISTORY));
+        navFav.setOnClickListener(v -> switchSection(SEC_FAV));
+        navProfile.setOnClickListener(v -> switchSection(SEC_PROFILE));
+        navSettings.setOnClickListener(v -> switchSection(SEC_SETTINGS));
 
-        // 全页右滑：非根页面先返回，首页/收藏页才打开侧边栏
+        // 首页 / 历史 / 收藏 / 设置 同级：整页右滑始终呼出侧边栏
         drawer.setOnSwipeRightListener(() -> {
             if (drawer.isDrawerOpen(GravityCompat.START)) {
                 drawer.closeDrawer(GravityCompat.START);
                 return true;
             }
-            if (section != SEC_HOME && section != SEC_FAV) {
-                showSection(SEC_HOME);
-                return true;
-            }
             return false;
         });
+    }
+
+    private void switchSection(int which) {
+        collapseSearch();
+        showSection(which);
     }
 
     private void setupSearch() {
@@ -202,7 +220,6 @@ public class MainActivity extends AppCompatActivity {
                 if (s.length() > 0) {
                     hideSearchHistory();
                 }
-                updateSearchAction();
             }
 
             @Override
@@ -228,14 +245,7 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        searchInput.setOnClickListener(v -> {
-            if (searchInput.getText().length() == 0) {
-                showSearchHistory();
-            }
-        });
         searchInput.setOnFocusChangeListener((v, hasFocus) -> {
-            searchFocused = hasFocus;
-            updateSearchAction();
             if (hasFocus && searchInput.getText().length() == 0) {
                 showSearchHistory();
             } else if (!hasFocus) {
@@ -243,14 +253,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        btnSearchAction.setOnClickListener(v -> {
-            if (searchFocused) {
-                closeSearch();
-            } else {
-                performSearch();
-            }
-        });
-
+        findViewById(R.id.btnSearchAction).setOnClickListener(v -> collapseSearch());
         findViewById(R.id.btnClearSearchHistory).setOnClickListener(v -> {
             prefs.clearHistory();
             hideSearchHistory();
@@ -258,25 +261,40 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /** 搜索框聚焦时右侧显示叉（关闭），否则显示放大镜（搜索）。 */
-    private void updateSearchAction() {
-        if (btnSearchAction == null) {
+    /** 圆形按钮展开成底部横条搜索框。 */
+    private void expandSearch() {
+        if (searchExpanded) {
             return;
         }
-        btnSearchAction.setImageResource(searchFocused ? R.drawable.ic_close : R.drawable.ic_search);
-        btnSearchAction.setContentDescription(
-                getString(searchFocused ? R.string.cancel : R.string.search));
+        searchExpanded = true;
+        searchFab.setVisibility(View.GONE);
+        searchBarExpanded.setVisibility(View.VISIBLE);
+        searchBarExpanded.setPivotX(getResources().getDisplayMetrics().widthPixels);
+        searchBarExpanded.setScaleX(0.25f);
+        searchBarExpanded.setAlpha(0f);
+        searchBarExpanded.animate().scaleX(1f).alpha(1f).setDuration(180).start();
+        searchInput.requestFocus();
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT);
+        }
+        if (searchInput.getText().length() == 0) {
+            showSearchHistory();
+        }
     }
 
-    private void closeSearch() {
-        searchInput.setText("");
-        searchInput.clearFocus();
+    /** 横条收回成圆形按钮。 */
+    private void collapseSearch() {
+        if (!searchExpanded) {
+            return;
+        }
+        searchExpanded = false;
         hideKeyboard();
+        searchInput.clearFocus();
         hideSearchHistory();
-        keyword = "";
-        page = 1;
-        noMore = false;
-        showSection(SEC_HOME);
+        searchInput.setText("");
+        searchBarExpanded.setVisibility(View.GONE);
+        searchFab.setVisibility(View.VISIBLE);
     }
 
     private void setupList() {
@@ -315,6 +333,10 @@ public class MainActivity extends AppCompatActivity {
         profileList.setAdapter(new ConcatAdapter(headerFav, favAdapter, headerHist, histAdapter));
     }
 
+    private void setupSettings() {
+        settingsPanel = new SettingsPanel(this, settingsView, () -> showSection(section));
+    }
+
     private AlbumAdapter.Listener newAlbumListener() {
         return new AlbumAdapter.Listener() {
             @Override
@@ -334,7 +356,6 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
-    /** 按当前显示方式切换列表 / 封面网格。 */
     private void applyViewMode() {
         boolean grid = prefs.getViewMode() == 1;
         adapter.setGrid(grid);
@@ -353,21 +374,22 @@ public class MainActivity extends AppCompatActivity {
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         }
-        boolean home = which == SEC_HOME;
+        applyHeader(which);
 
-        searchBar.setVisibility(home ? View.VISIBLE : View.GONE);
-        pageBar.setVisibility(home ? View.GONE : View.VISIBLE);
-        if (!home) {
-            barTitle.setText(sectionTitle(which));
-            searchInput.clearFocus();
-            hideKeyboard();
-        }
+        boolean listSection = which == SEC_HOME || which == SEC_HISTORY || which == SEC_FAV;
+        list.setVisibility(listSection ? View.VISIBLE : View.GONE);
+        refresh.setVisibility((which == SEC_PROFILE || which == SEC_SETTINGS) ? View.GONE : View.VISIBLE);
         profileList.setVisibility(which == SEC_PROFILE ? View.VISIBLE : View.GONE);
+        settingsView.setVisibility(which == SEC_SETTINGS ? View.VISIBLE : View.GONE);
 
-        boolean showWeb = home && webMode;
-        webView.setVisibility(showWeb ? View.VISIBLE : View.GONE);
-        refresh.setVisibility((which == SEC_PROFILE || showWeb) ? View.GONE : View.VISIBLE);
+        boolean showFab = listSection;
+        searchFab.setVisibility(showFab && !searchExpanded ? View.VISIBLE : View.GONE);
+        if (!listSection) {
+            searchBarExpanded.setVisibility(View.GONE);
+            hideSearchHistory();
+        }
 
+        webView.setVisibility((which == SEC_HOME && webMode) ? View.VISIBLE : View.GONE);
         updateDrawerSelection(which);
 
         emptyView.setVisibility(View.GONE);
@@ -379,7 +401,11 @@ public class MainActivity extends AppCompatActivity {
             showProfile();
             return;
         }
-        if (showWeb) {
+        if (which == SEC_SETTINGS) {
+            settingsPanel.refresh();
+            return;
+        }
+        if (which == SEC_HOME && webMode) {
             String cur = webView.getUrl();
             if (cur == null || cur.isEmpty()) {
                 webView.loadUrl(site.base());
@@ -427,6 +453,36 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void applyHeader(int which) {
+        int icon;
+        int title;
+        switch (which) {
+            case SEC_HISTORY:
+                icon = R.drawable.ic_history;
+                title = R.string.history_chip;
+                break;
+            case SEC_FAV:
+                icon = R.drawable.ic_star_border;
+                title = R.string.tab_fav;
+                break;
+            case SEC_PROFILE:
+                icon = R.drawable.ic_person;
+                title = R.string.tab_profile;
+                break;
+            case SEC_SETTINGS:
+                icon = R.drawable.ic_settings;
+                title = R.string.settings_title;
+                break;
+            default:
+                icon = R.drawable.ic_menu;
+                title = R.string.home_title;
+                break;
+        }
+        btnHeader.setImageResource(icon);
+        btnHeader.setColorFilter(ContextCompat.getColor(this, R.color.on_surface));
+        headerTitle.setText(title);
+    }
+
     private void showProfile() {
         headerFav.setTitle(getString(R.string.tab_fav));
         headerHist.setTitle(getString(R.string.history_chip));
@@ -439,32 +495,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private String sectionTitle(int which) {
-        switch (which) {
-            case SEC_HISTORY:
-                return getString(R.string.history_chip);
-            case SEC_FAV:
-                return getString(R.string.tab_fav);
-            case SEC_PROFILE:
-                return getString(R.string.tab_profile);
-            default:
-                return getString(R.string.tab_search);
-        }
-    }
-
     private void updateDrawerSelection(int which) {
         setRowSelected(navHome, which == SEC_HOME);
         setRowSelected(navHistory, which == SEC_HISTORY);
         setRowSelected(navFav, which == SEC_FAV);
         setRowSelected(navProfile, which == SEC_PROFILE);
-        setRowSelected(navSettings, false);
+        setRowSelected(navSettings, which == SEC_SETTINGS);
     }
 
     private void setRowSelected(View row, boolean selected) {
         TypedValue tv = new TypedValue();
         getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
         row.setBackgroundResource(selected ? R.drawable.bg_drawer_selected : tv.resourceId);
-        int primary = ContextCompat.getColor(this, R.color.primary);
+        int primary = ThemeManager.primary(this);
         int normal = ContextCompat.getColor(this, R.color.on_surface);
         for (int i = 0; i < ((android.view.ViewGroup) row).getChildCount(); i++) {
             View c = ((android.view.ViewGroup) row).getChildAt(i);
@@ -480,7 +523,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /** 历史条目统一成 Album，复用同一套列表 / 封面样式。 */
     private List<Models.Album> historyToAlbums(List<Models.History> hs) {
         List<Models.Album> out = new ArrayList<>();
         for (Models.History h : hs) {
@@ -522,19 +564,13 @@ public class MainActivity extends AppCompatActivity {
     private void performSearch() {
         String q = searchInput.getText() == null ? "" : searchInput.getText().toString().trim();
         if (q.isEmpty()) {
-            showSection(SEC_HOME);
             return;
         }
+        hideKeyboard();
         if (section != SEC_HOME) {
             section = SEC_HOME;
         }
         showSection(SEC_HOME);
-        if (webMode) {
-            hideKeyboard();
-            searchInput.clearFocus();
-            webView.loadUrl(site.searchUrl(q, 1));
-            return;
-        }
         doSearch(q, true);
     }
 
@@ -623,7 +659,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /** 纯数字（或 JM1464578 这种）当作作品编号。 */
     String asAlbumId(String q) {
         if (q == null) {
             return "";
@@ -927,18 +962,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt("section", section);
+    }
+
+    @Override
     public void onBackPressed() {
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
             return;
         }
-        if (section == SEC_HOME && webMode) {
-            if (webView.canGoBack()) {
-                webView.goBack();
-                return;
-            }
-            webMode = false;
-            showSection(SEC_HOME);
+        if (searchExpanded) {
+            collapseSearch();
             return;
         }
         if (section != SEC_HOME) {

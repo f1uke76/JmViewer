@@ -100,4 +100,50 @@
         <item name="android:singleLine">true</item>
     </style>
 
+    <!-- 主题色预设：同一色系的不同明暗层次 -->
+    <style name="ThemeOverlay.ComicSearch.Accent.Blue" parent="">
+        <item name="colorPrimary">#1668E3</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#E7EFFC</item>
+        <item name="colorOnPrimaryContainer">#111418</item>
+        <item name="colorSecondary">#1668E3</item>
+        <item name="colorSecondaryContainer">#E7EFFC</item>
+    </style>
+
+    <style name="ThemeOverlay.ComicSearch.Accent.Green" parent="">
+        <item name="colorPrimary">#1E8E5A</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#C9F0DC</item>
+        <item name="colorOnPrimaryContainer">#0B2A1C</item>
+        <item name="colorSecondary">#1E8E5A</item>
+        <item name="colorSecondaryContainer">#C9F0DC</item>
+    </style>
+
+    <style name="ThemeOverlay.ComicSearch.Accent.Purple" parent="">
+        <item name="colorPrimary">#6A4BC4</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#E9E1FF</item>
+        <item name="colorOnPrimaryContainer">#1C1233</item>
+        <item name="colorSecondary">#6A4BC4</item>
+        <item name="colorSecondaryContainer">#E9E1FF</item>
+    </style>
+
+    <style name="ThemeOverlay.ComicSearch.Accent.Orange" parent="">
+        <item name="colorPrimary">#C4621E</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#FFE6D2</item>
+        <item name="colorOnPrimaryContainer">#331A08</item>
+        <item name="colorSecondary">#C4621E</item>
+        <item name="colorSecondaryContainer">#FFE6D2</item>
+    </style>
+
+    <style name="ThemeOverlay.ComicSearch.Accent.Teal" parent="">
+        <item name="colorPrimary">#0E7C86</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#CFF1F3</item>
+        <item name="colorOnPrimaryContainer">#06282B</item>
+        <item name="colorSecondary">#0E7C86</item>
+        <item name="colorSecondaryContainer">#CFF1F3</item>
+    </style>
+
 </resources>

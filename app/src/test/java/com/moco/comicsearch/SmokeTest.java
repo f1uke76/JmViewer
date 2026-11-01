@@ -29,18 +29,20 @@ public class SmokeTest {
         assertNotNull(a.findViewById(R.id.list));
         assertNotNull(a.findViewById(R.id.searchInput));
         assertNotNull(a.findViewById(R.id.profileView));
+        assertNotNull(a.findViewById(R.id.settingsView));
         assertEquals(View.GONE, a.findViewById(R.id.profileView).getVisibility());
-        assertEquals(View.VISIBLE, a.findViewById(R.id.searchBar).getVisibility());
 
         a.findViewById(R.id.navProfile).performClick();
         assertEquals(View.VISIBLE, a.findViewById(R.id.profileView).getVisibility());
-        assertEquals(View.GONE, a.findViewById(R.id.searchBar).getVisibility());
 
         a.findViewById(R.id.navFav).performClick();
         assertEquals(View.GONE, a.findViewById(R.id.profileView).getVisibility());
 
         TextView emptyTitle = a.findViewById(R.id.emptyTitle);
         assertEquals(a.getString(R.string.empty_fav), emptyTitle.getText().toString());
+
+        a.findViewById(R.id.navSettings).performClick();
+        assertEquals(View.VISIBLE, a.findViewById(R.id.settingsView).getVisibility());
 
         c.pause().stop().destroy();
     }

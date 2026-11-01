@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.TextView;
 
@@ -96,8 +97,7 @@ public final class MirrorPicker {
         final int[] selected = {-1};
         for (int i = 0; i < data.size(); i++) {
             Models.Mirror m = data.get(i);
-            String mark = m.reachable ? "✅" : "❌";
-            StringBuilder sb = new StringBuilder(mark).append("  ").append(m.host);
+            StringBuilder sb = new StringBuilder(m.host);
             if (!m.label.isEmpty()) {
                 sb.append("  ·  ").append(m.label);
             }
@@ -127,10 +127,19 @@ public final class MirrorPicker {
             public View getView(int position, View convertView, ViewGroup parent) {
                 View v = convertView != null ? convertView
                         : LayoutInflater.from(activity).inflate(R.layout.item_mirror, parent, false);
-                RadioButton radio = v.findViewById(R.id.mirrorRadio);
+                ImageView radio = v.findViewById(R.id.mirrorRadio);
                 TextView label = v.findViewById(R.id.mirrorLabel);
-                radio.setChecked(position == selected[0]);
+                ImageView status = v.findViewById(R.id.mirrorStatus);
+                Models.Mirror m = data.get(position);
+                radio.setVisibility(position == selected[0] ? View.VISIBLE : View.INVISIBLE);
                 label.setText(rows[position]);
+                if (status != null) {
+                    boolean ok = m.reachable;
+                    status.setImageResource(ok ? R.drawable.ic_check : R.drawable.ic_close);
+                    status.setColorFilter(ok
+                            ? ThemeManager.primary(activity)
+                            : activity.getResources().getColor(R.color.danger, activity.getTheme()));
+                }
                 return v;
             }
         };

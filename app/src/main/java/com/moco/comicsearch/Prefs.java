@@ -25,6 +25,8 @@ public class Prefs {
     private static final String KEY_THEME = "theme_mode";
     private static final String KEY_VIEW = "view_mode";
     private static final String KEY_HOME_REC = "home_recommend";
+    private static final String KEY_ACCENT = "theme_accent";
+    private static final String KEY_ICON_REFRESH = "icon_refresh_version";
 
     private static final int MAX_HISTORY = 15;
 
@@ -89,6 +91,23 @@ public class Prefs {
 
     public void setHomeRecommend(boolean on) {
         sp.edit().putBoolean(KEY_HOME_REC, on).apply();
+    }
+
+    /** 0 跟随壁纸 / 1 蓝 / 2 绿 / 3 紫 / 4 橙 / 5 青 */
+    public int getThemeAccent() {
+        return sp.getInt(KEY_ACCENT, 0);
+    }
+
+    public void setThemeAccent(int accent) {
+        sp.edit().putInt(KEY_ACCENT, accent).apply();
+    }
+
+    public int getIconRefreshVersion() {
+        return sp.getInt(KEY_ICON_REFRESH, -1);
+    }
+
+    public void setIconRefreshVersion(int code) {
+        sp.edit().putInt(KEY_ICON_REFRESH, code).apply();
     }
 
     public void setAdBlock(boolean on) {

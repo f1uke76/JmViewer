@@ -27,6 +27,7 @@ public class LoginActivity extends SwipeBackActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.apply(this);
         setContentView(R.layout.activity_login);
 
         site = Site.get(this);

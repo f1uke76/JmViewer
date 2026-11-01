@@ -44,6 +44,7 @@ public class DetailActivity extends SwipeBackActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.apply(this);
         setContentView(R.layout.activity_detail);
 
         site = Site.get(this);

@@ -53,4 +53,24 @@ public final class IconSwitcher {
         } catch (Exception ignored) {
         }
     }
+
+    /** 强制刷新桌面图标缓存：先禁用再启用当前别名。 */
+    public static void forceRefresh(Context ctx) {
+        try {
+            int style = new Prefs(ctx).getIconStyle();
+            if (style < 0 || style >= ALIASES.length) {
+                style = 0;
+            }
+            String pkg = ctx.getPackageName();
+            ComponentName cn = new ComponentName(pkg, pkg + ALIASES[style]);
+            PackageManager pm = ctx.getPackageManager();
+            pm.setComponentEnabledSetting(cn,
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP);
+            pm.setComponentEnabledSetting(cn,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP);
+        } catch (Exception ignored) {
+        }
+    }
 }

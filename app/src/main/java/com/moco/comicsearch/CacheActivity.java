@@ -31,6 +31,7 @@ public class CacheActivity extends SwipeBackActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThemeManager.apply(this);
         setContentView(R.layout.activity_cache);
 
         loader = ImageLoader.get(this);
