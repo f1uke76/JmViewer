@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 共用基础：跟随系统的 Material 3 DayNight，全局直角化 -->
+    <style name="Theme.ComicSearch.Base" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">@color/primary_dim</item>
+        <item name="colorOnPrimaryContainer">@color/on_surface</item>
+        <item name="colorSecondary">@color/primary</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorSurfaceVariant">@color/surface2</item>
+        <item name="colorOnSurfaceVariant">@color/muted</item>
+        <item name="colorOutline">@color/divider</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:textColorHint">@color/muted</item>
+        <item name="android:textColorPrimary">@color/on_surface</item>
+        <item name="android:textColorSecondary">@color/muted</item>
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.ComicSearch.Dialog</item>
+
+        <!-- 全局圆角归零：按钮、卡片、弹窗一律直角 -->
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.ComicSearch.None</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.ComicSearch.None</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.ComicSearch.None</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.ComicSearch.None</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.ComicSearch.None</item>
+    </style>
+
+    <!-- 浅色：状态栏用深色图标 -->
+    <style name="Theme.ComicSearch" parent="Theme.ComicSearch.Base">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+    </style>
+
+    <style name="ShapeAppearance.ComicSearch.None" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">0dp</item>
+    </style>
+
+    <style name="ThemeOverlay.ComicSearch.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/surface2</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.ComicSearch.None</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.ComicSearch.None</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.ComicSearch.None</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.ComicSearch.None</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.ComicSearch.None</item>
+    </style>
+
+    <!-- 阅读器始终黑底 -->
+    <style name="Theme.ComicSearch.Reader" parent="Theme.ComicSearch">
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+    </style>
+
+    <!-- 直角按钮：统一按键风格 -->
+    <style name="Widget.ComicSearch.Button" parent="Widget.Material3.Button">
+        <item name="cornerRadius">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="Widget.ComicSearch.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="Widget.ComicSearch.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- 抽屉菜单文字 -->
+    <style name="DrawerLabel">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:singleLine">true</item>
+    </style>
+
+    <style name="BottomNavLabel">
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/muted</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:layout_marginTop">3dp</item>
+        <item name="android:singleLine">true</item>
+    </style>
+
+</resources>
