@@ -44,6 +44,8 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     private boolean showTrash = false;
     private boolean showDownload = false;
     private boolean showProgress = false;
+    private boolean selectionMode = false;
+    private java.util.Set<String> selectedIds = new java.util.HashSet<>();
 
     public AlbumAdapter(ImageLoader loader, Listener listener) {
         this.loader = loader;
@@ -63,6 +65,17 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     /** 是否显示下载进度条（下载页）。 */
     public void setShowProgress(boolean show) {
         this.showProgress = show;
+    }
+
+    /** 多选模式。 */
+    public void setSelectionMode(boolean show) {
+        this.selectionMode = show;
+        notifyDataSetChanged();
+    }
+
+    public void setSelectedIds(java.util.Set<String> ids) {
+        this.selectedIds = ids == null ? new java.util.HashSet<>() : ids;
+        notifyDataSetChanged();
     }
 
     public void setGrid(boolean grid) {
@@ -122,6 +135,19 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
         Models.Album a = items.get(position);
+        if (h.check != null) {
+            if (selectionMode) {
+                h.check.setVisibility(View.VISIBLE);
+                boolean sel = selectedIds != null && selectedIds.contains(a.id);
+                h.check.setAlpha(sel ? 1f : 0.3f);
+                h.check.setColorFilter(sel
+                        ? ThemeManager.primary(h.itemView.getContext())
+                        : androidx.core.content.ContextCompat.getColor(
+                                h.itemView.getContext(), R.color.muted));
+            } else {
+                h.check.setVisibility(View.GONE);
+            }
+        }
         h.title.setText(a.title);
 
         if (h.meta != null) {
@@ -209,8 +235,22 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             }
         }
         if (h.btnDownload != null) {
+            boolean show = false;
             if (showDownload) {
+                if (showProgress) {
+                    if (a.progress >= 0) {
+                        show = true;
+                        h.btnDownload.setImageResource(a.downloadState == 1
+                                ? R.drawable.ic_pause : R.drawable.ic_play);
+                    }
+                } else {
+                    show = true;
+                    h.btnDownload.setImageResource(R.drawable.ic_download);
+                }
+            }
+            if (show) {
                 h.btnDownload.setVisibility(View.VISIBLE);
+                h.btnDownload.setColorFilter(ThemeManager.primary(h.itemView.getContext()));
                 h.btnDownload.setOnClickListener(v -> listener.onDownload(a));
             } else {
                 h.btnDownload.setVisibility(View.GONE);
@@ -245,6 +285,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     }
 
     static class VH extends RecyclerView.ViewHolder {
+        ImageView check;
         ImageView cover;
         TextView title;
         TextView meta;
@@ -256,6 +297,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
 
         VH(@NonNull View v) {
             super(v);
+            check = v.findViewById(R.id.check);
             cover = v.findViewById(R.id.cover);
             title = v.findViewById(R.id.title);
             meta = v.findViewById(R.id.meta);

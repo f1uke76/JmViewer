@@ -27,6 +27,7 @@ public class CacheActivity extends SwipeBackActivity {
     private Store store;
     private AlbumAdapter adapter;
     private View emptyView;
+    private final List<Models.Album> current = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,8 +68,7 @@ public class CacheActivity extends SwipeBackActivity {
                 // 垃圾桶：点击直接删除该作品缓存
                 String aid = album.readId == null || album.readId.isEmpty() ? album.id : album.readId;
                 loader.clearAlbum(aid);
-                Toast.makeText(CacheActivity.this, R.string.cache_cleared_album,
-                        Toast.LENGTH_SHORT).show();
+                Ui.toast(CacheActivity.this, CacheActivity.this.getString(R.string.cache_cleared_album));
                 load();
             }
 
@@ -79,8 +79,7 @@ public class CacheActivity extends SwipeBackActivity {
                         ? album.id : album.readId;
                 dm.enqueue(album, chapterId);
                 dm.start(album.id);
-                Toast.makeText(CacheActivity.this, R.string.download_start,
-                        Toast.LENGTH_SHORT).show();
+                Ui.toast(CacheActivity.this, CacheActivity.this.getString(R.string.download_start));
             }
         });
         adapter.setShowTrash(true);
@@ -110,8 +109,13 @@ public class CacheActivity extends SwipeBackActivity {
 
         List<Models.Album> out = new ArrayList<>();
         final Map<String, Long> sizes = new HashMap<>();
+        DownloadManager dm = DownloadManager.get(this);
         for (Map.Entry<String, Long> e : cached.entrySet()) {
             String aid = e.getKey();
+            // 已下载完成的漫画不算缓存，不在缓存管理中展示
+            if (dm.isDownloadedChapter(aid)) {
+                continue;
+            }
             Models.Album a = known.get(aid);
             if (a == null) {
                 a = new Models.Album();
@@ -134,6 +138,8 @@ public class CacheActivity extends SwipeBackActivity {
             }
         });
 
+        current.clear();
+        current.addAll(out);
         adapter.submit(out);
         emptyView.setVisibility(out.isEmpty() ? View.VISIBLE : View.GONE);
     }
@@ -150,7 +156,7 @@ public class CacheActivity extends SwipeBackActivity {
                 .setMessage(getString(R.string.confirm_clear_album, name))
                 .setPositiveButton(R.string.remove, (d, w) -> {
                     loader.clearAlbum(aid);
-                    Toast.makeText(this, R.string.cache_cleared_album, Toast.LENGTH_SHORT).show();
+                    Ui.toast(this, this.getString(R.string.cache_cleared_album));
                     load();
                 })
                 .setNegativeButton(R.string.cancel, null)
@@ -162,8 +168,10 @@ public class CacheActivity extends SwipeBackActivity {
                 .setTitle(R.string.clear_all_cache)
                 .setMessage(R.string.clear_cache)
                 .setPositiveButton(R.string.remove, (d, w) -> {
-                    loader.clearAll();
-                    Toast.makeText(this, R.string.cache_cleared_all, Toast.LENGTH_SHORT).show();
+                    for (Models.Album a : current) {
+                        loader.clearAlbum(a.readId == null || a.readId.isEmpty() ? a.id : a.readId);
+                    }
+                    Ui.toast(this, this.getString(R.string.cache_cleared_all));
                     load();
                 })
                 .setNegativeButton(R.string.cancel, null)

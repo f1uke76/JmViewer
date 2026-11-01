@@ -223,7 +223,7 @@
                     android:layout_marginBottom="12dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:background="@drawable/bg_block"
+                    android:background="@drawable/bg_block_primary"
                     android:paddingStart="16dp"
                     android:paddingEnd="4dp"
                     android:visibility="gone">
@@ -235,8 +235,8 @@
                         android:layout_weight="1"
                         android:background="@null"
                         android:hint="@string/hint_search"
-                        android:textColor="@color/on_surface"
-                        android:textColorHint="@color/muted"
+                        android:textColor="@color/white"
+                        android:textColorHint="#B3FFFFFF"
                         android:textSize="15sp"
                         android:gravity="center_vertical"
                         android:inputType="text"
@@ -254,6 +254,7 @@
                         android:layout_height="44dp"
                         android:padding="11dp"
                         android:src="@drawable/ic_close"
+                        android:tint="@color/white"
                         android:contentDescription="@string/cancel"
                         android:clickable="true"
                         android:focusable="true"
@@ -264,18 +265,68 @@
             <!-- 右下角圆形搜索按钮 -->
             <ImageView
                 android:id="@+id/searchFab"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
                 android:layout_gravity="bottom|end"
                 android:layout_marginEnd="16dp"
                 android:layout_marginBottom="16dp"
-                android:padding="14dp"
+                android:padding="16dp"
                 android:src="@drawable/ic_search"
                 android:tint="@color/white"
                 android:contentDescription="@string/search"
                 android:clickable="true"
                 android:focusable="true"
                 android:background="@drawable/bg_circle_primary" />
+
+            <LinearLayout
+                android:id="@+id/selectionBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/btnSelStart"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_marginBottom="12dp"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_play"
+                    android:tint="@color/white"
+                    android:background="@drawable/bg_circle_primary"
+                    android:contentDescription="@string/download_start"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <ImageView
+                    android:id="@+id/btnSelPause"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_marginBottom="12dp"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_pause"
+                    android:tint="@color/white"
+                    android:background="@drawable/bg_circle_primary"
+                    android:contentDescription="@string/download_pause"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <ImageView
+                    android:id="@+id/btnSelDelete"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_delete"
+                    android:tint="@color/white"
+                    android:background="@drawable/bg_circle_danger"
+                    android:contentDescription="@string/remove"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
         </FrameLayout>
     </LinearLayout>
 

@@ -86,8 +86,7 @@ public class DetailActivity extends SwipeBackActivity {
                 DownloadManager dm = DownloadManager.get(DetailActivity.this);
                 dm.enqueue(album, currentChapterId());
                 dm.start(album.id);
-                Toast.makeText(DetailActivity.this, R.string.download_start,
-                        Toast.LENGTH_SHORT).show();
+                Ui.toast(DetailActivity.this, DetailActivity.this.getString(R.string.download_start));
             }
 
             @Override
@@ -156,7 +155,7 @@ public class DetailActivity extends SwipeBackActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     if (album == null) {
-                        Toast.makeText(this, R.string.load_failed, Toast.LENGTH_SHORT).show();
+                        Ui.toast(this, this.getString(R.string.load_failed));
                     }
                 });
             }
@@ -269,7 +268,7 @@ public class DetailActivity extends SwipeBackActivity {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)));
         } catch (Exception e) {
-            Toast.makeText(this, R.string.browser_open_failed, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, this.getString(R.string.browser_open_failed));
         }
     }
 
@@ -280,7 +279,7 @@ public class DetailActivity extends SwipeBackActivity {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm != null) {
             cm.setPrimaryClip(ClipData.newPlainText("text", text));
-            Toast.makeText(this, toast, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, toast);
         }
     }
 
@@ -291,10 +290,10 @@ public class DetailActivity extends SwipeBackActivity {
         boolean fav = store.isFavorite(album.id);
         if (fav) {
             store.removeFavorite(album.id);
-            Toast.makeText(this, R.string.unfavorited, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, this.getString(R.string.unfavorited));
         } else {
             store.addFavorite(album);
-            Toast.makeText(this, R.string.favorited, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, this.getString(R.string.favorited));
         }
         adapter.setAlbum(album, !fav);
 
@@ -349,11 +348,11 @@ public class DetailActivity extends SwipeBackActivity {
         }
         final String aid = currentChapterId();
         if (aid.isEmpty()) {
-            Toast.makeText(this, R.string.load_failed, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, this.getString(R.string.load_failed));
             return;
         }
         if (store.isDownloaded(album.id)) {
-            Toast.makeText(this, R.string.downloaded, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, this.getString(R.string.downloaded));
             return;
         }
 
@@ -389,12 +388,10 @@ public class DetailActivity extends SwipeBackActivity {
                             dialog.dismiss();
                             if (ok) {
                                 store.addDownload(target);
-                                Toast.makeText(DetailActivity.this, R.string.download_done,
-                                        Toast.LENGTH_SHORT).show();
+                                Ui.toast(DetailActivity.this, DetailActivity.this.getString(R.string.download_done));
                             } else {
-                                Toast.makeText(DetailActivity.this,
-                                        getString(R.string.download_failed) + " " + msg,
-                                        Toast.LENGTH_LONG).show();
+                                Ui.toast(DetailActivity.this,
+                                        getString(R.string.download_failed) + " " + msg);
                             }
                         });
                     }
@@ -402,8 +399,7 @@ public class DetailActivity extends SwipeBackActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     dialog.dismiss();
-                    Toast.makeText(DetailActivity.this, R.string.download_failed,
-                            Toast.LENGTH_SHORT).show();
+                    Ui.toast(DetailActivity.this, DetailActivity.this.getString(R.string.download_failed));
                 });
             }
         });

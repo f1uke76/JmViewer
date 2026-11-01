@@ -147,6 +147,19 @@ public class DownloadManager {
         return null;
     }
 
+    /** 该章节是否属于已完成的下载（已下载不算缓存，缓存管理不再展示/删除）。 */
+    public boolean isDownloadedChapter(String chapterId) {
+        if (chapterId == null || chapterId.isEmpty()) {
+            return false;
+        }
+        for (Task t : tasks()) {
+            if (t.state == 3 && chapterId.equals(t.chapterId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void update(Task task) {
         List<Task> all = tasks();
         boolean replaced = false;

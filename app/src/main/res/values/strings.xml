@@ -189,4 +189,7 @@
     <string name="link_copied">链接已复制</string>
     <string name="browser_open_failed">没有可用的浏览器</string>
     <string name="confirm_remove_download">确定删除「%1$s」的下载与缓存？</string>
+    <string name="selected_count">已选 %1$d 项</string>
+    <string name="confirm_delete_selected">确定删除选中的 %1$d 项？</string>
+    <string name="download_pause">暂停下载</string>
 </resources>

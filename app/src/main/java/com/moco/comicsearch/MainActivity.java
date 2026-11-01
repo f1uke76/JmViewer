@@ -65,6 +65,10 @@ public class MainActivity extends AppCompatActivity {
     private ImageView btnHeader;
     private TextView headerTitle;
     private ImageView searchFab;
+    private View selectionBar;
+    private View btnSelStart, btnSelPause, btnSelDelete;
+    private boolean selectionMode = false;
+    private final java.util.Set<String> selectedIds = new java.util.HashSet<>();
     private View searchBarExpanded;
     private EditText searchInput;
     private SwipeRefreshLayout refresh;
@@ -141,6 +145,10 @@ public class MainActivity extends AppCompatActivity {
         btnHeader = findViewById(R.id.btnHeader);
         headerTitle = findViewById(R.id.headerTitle);
         searchFab = findViewById(R.id.searchFab);
+        selectionBar = findViewById(R.id.selectionBar);
+        btnSelStart = findViewById(R.id.btnSelStart);
+        btnSelPause = findViewById(R.id.btnSelPause);
+        btnSelDelete = findViewById(R.id.btnSelDelete);
         searchBarExpanded = findViewById(R.id.searchBarExpanded);
         searchInput = findViewById(R.id.searchInput);
         refresh = findViewById(R.id.refresh);
@@ -157,8 +165,17 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         setupWebView();
 
-        btnHeader.setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
+        btnHeader.setOnClickListener(v -> {
+            if (selectionMode) {
+                exitSelection();
+            } else {
+                drawer.openDrawer(GravityCompat.START);
+            }
+        });
         searchFab.setOnClickListener(v -> expandSearch());
+        btnSelStart.setOnClickListener(v -> startSelected());
+        btnSelPause.setOnClickListener(v -> pauseSelected());
+        btnSelDelete.setOnClickListener(v -> deleteSelected());
         drawerSite.setText(site.base().replace("https://", "").replace("http://", ""));
         drawerVersion.setText("v" + BuildConfig.VERSION_NAME);
         drawerSite.setOnClickListener(v -> MirrorPicker.show(this, m -> {
@@ -269,7 +286,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btnClearSearchHistory).setOnClickListener(v -> {
             prefs.clearHistory();
             hideSearchHistory();
-            Toast.makeText(this, R.string.history_cleared, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, this.getString(R.string.history_cleared));
         });
     }
 
@@ -370,7 +387,11 @@ public class MainActivity extends AppCompatActivity {
         return new AlbumAdapter.Listener() {
             @Override
             public void onClick(Models.Album album) {
-                openDetail(album);
+                if (selectionMode) {
+                    toggleSelection(album);
+                } else {
+                    openDetail(album);
+                }
             }
 
             @Override
@@ -380,12 +401,32 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onLongClick(Models.Album album) {
-                showItemMenu(album);
+                if (selectionMode) {
+                    toggleSelection(album);
+                } else {
+                    enterSelection(album);
+                }
             }
 
             @Override
             public void onTrash(Models.Album album) {
                 confirmRemoveDownload(album);
+            }
+
+            @Override
+            public void onDownload(Models.Album album) {
+                if (downloadManager == null) {
+                    return;
+                }
+                DownloadManager.Task t = downloadManager.get(album.id);
+                if (t == null) {
+                    return;
+                }
+                if (t.state == 1) {
+                    downloadManager.pause(album.id);
+                } else {
+                    downloadManager.start(album.id);
+                }
             }
         };
     }
@@ -405,6 +446,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void showSection(int which) {
         section = which;
+        if (selectionMode) {
+            selectionMode = false;
+            selectedIds.clear();
+        }
+        if (selectionBar != null) {
+            selectionBar.setVisibility(View.GONE);
+        }
+        if (adapter != null) {
+            adapter.setSelectionMode(false);
+            adapter.setSelectedIds(selectedIds);
+        }
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         }
@@ -445,7 +497,7 @@ public class MainActivity extends AppCompatActivity {
         if (which == SEC_DOWNLOAD) {
             adapter.setShowProgress(true);
             adapter.setShowTrash(true);
-            adapter.setShowDownload(false);
+            adapter.setShowDownload(true);
             adapter.setGrid(false);
             if (!(list.getLayoutManager() instanceof LinearLayoutManager)) {
                 list.setLayoutManager(new LinearLayoutManager(this));
@@ -570,11 +622,8 @@ public class MainActivity extends AppCompatActivity {
             if (c instanceof TextView) {
                 ((TextView) c).setTextColor(selected ? primary : normal);
             } else if (c instanceof ImageView) {
-                if (selected) {
-                    ((ImageView) c).setColorFilter(primary);
-                } else {
-                    ((ImageView) c).clearColorFilter();
-                }
+                ((ImageView) c).setColorFilter(primary);
+                c.setAlpha(selected ? 1f : 0.72f);
             }
         }
     }
@@ -616,6 +665,7 @@ public class MainActivity extends AppCompatActivity {
             a.cover = t.cover;
             a.readId = t.chapterId;
             a.progress = t.state == 3 ? -1 : t.progress();
+            a.downloadState = t.state;
             a.extra = t.state == 3 ? "" : (t.done + "/" + (t.total > 0 ? t.total : "?"));
             out.add(a);
         }
@@ -633,6 +683,110 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setNegativeButton(R.string.cancel, null)
                 .show();
+    }
+
+    // ------------------------------------------------------------ 多选
+
+    private void enterSelection(Models.Album album) {
+        if (album == null || album.id == null || album.id.isEmpty()) {
+            return;
+        }
+        selectionMode = true;
+        selectedIds.clear();
+        selectedIds.add(album.id);
+        applySelectionUi();
+    }
+
+    private void toggleSelection(Models.Album album) {
+        if (album == null) {
+            return;
+        }
+        if (selectedIds.contains(album.id)) {
+            selectedIds.remove(album.id);
+        } else {
+            selectedIds.add(album.id);
+        }
+        if (selectedIds.isEmpty()) {
+            exitSelection();
+        } else {
+            applySelectionUi();
+        }
+    }
+
+    private void exitSelection() {
+        selectionMode = false;
+        selectedIds.clear();
+        applySelectionUi();
+    }
+
+    private void applySelectionUi() {
+        if (adapter != null) {
+            adapter.setSelectionMode(selectionMode);
+            adapter.setSelectedIds(selectedIds);
+        }
+        selectionBar.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
+        boolean download = section == SEC_DOWNLOAD;
+        btnSelStart.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
+        btnSelPause.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
+        if (selectionMode) {
+            searchFab.setVisibility(View.GONE);
+            searchBarExpanded.setVisibility(View.GONE);
+            hideSearchHistory();
+            btnHeader.setImageResource(R.drawable.ic_close);
+            btnHeader.setColorFilter(ContextCompat.getColor(this, R.color.on_surface));
+            headerTitle.setText(getString(R.string.selected_count, selectedIds.size()));
+        } else {
+            applyHeader(section);
+            boolean showFab = section == SEC_HOME && !searchExpanded;
+            searchFab.setVisibility(showFab ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void deleteSelected() {
+        if (selectedIds.isEmpty()) {
+            return;
+        }
+        final int count = selectedIds.size();
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.remove)
+                .setMessage(getString(R.string.confirm_delete_selected, count))
+                .setPositiveButton(R.string.remove, (d, w) -> {
+                    for (String id : new ArrayList<>(selectedIds)) {
+                        if (section == SEC_FAV) {
+                            store.removeFavorite(id);
+                        } else if (section == SEC_HISTORY) {
+                            store.removeHistory(id);
+                        } else if (section == SEC_DOWNLOAD && downloadManager != null) {
+                            downloadManager.remove(id);
+                        }
+                    }
+                    exitSelection();
+                    showSection(section);
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void startSelected() {
+        if (downloadManager == null) {
+            return;
+        }
+        for (String id : new ArrayList<>(selectedIds)) {
+            downloadManager.start(id);
+        }
+        exitSelection();
+        showSection(section);
+    }
+
+    private void pauseSelected() {
+        if (downloadManager == null) {
+            return;
+        }
+        for (String id : new ArrayList<>(selectedIds)) {
+            downloadManager.pause(id);
+        }
+        exitSelection();
+        showSection(section);
     }
 
     private String timeAgo(long time) {
@@ -971,7 +1125,7 @@ public class MainActivity extends AppCompatActivity {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm != null) {
             cm.setPrimaryClip(ClipData.newPlainText("title", album.title));
-            Toast.makeText(this, R.string.title_copied, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, this.getString(R.string.title_copied));
         }
     }
 
@@ -1008,7 +1162,7 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage(getString(R.string.confirm_clear_album, name))
                 .setPositiveButton(R.string.remove, (d, w) -> {
                     loader.clearAlbum(album.readId.isEmpty() ? album.id : album.readId);
-                    Toast.makeText(this, R.string.cache_cleared_album, Toast.LENGTH_SHORT).show();
+                    Ui.toast(this, this.getString(R.string.cache_cleared_album));
                 })
                 .setNegativeButton(R.string.cancel, null)
                 .show();
@@ -1018,10 +1172,10 @@ public class MainActivity extends AppCompatActivity {
         boolean fav = store.isFavorite(album.id);
         if (fav) {
             store.removeFavorite(album.id);
-            Toast.makeText(this, R.string.unfavorited, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, this.getString(R.string.unfavorited));
         } else {
             store.addFavorite(album);
-            Toast.makeText(this, R.string.favorited, Toast.LENGTH_SHORT).show();
+            Ui.toast(this, this.getString(R.string.favorited));
         }
         if (isLoggedIn()) {
             final boolean add = !fav;
