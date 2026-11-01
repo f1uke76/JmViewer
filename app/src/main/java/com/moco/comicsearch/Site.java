@@ -219,7 +219,7 @@ public class Site {
         return new JSONObject(post("/ajax/delete_favorite_album", form));
     }
 
-    /** 通过首页是否出现「登出」链接判断登录态。 */
+    /** 通过主页是否出现「登出」链接判断登录态。 */
     public boolean checkLoggedIn() {
         try {
             String html = get("/");

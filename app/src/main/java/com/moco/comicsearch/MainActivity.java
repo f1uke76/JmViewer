@@ -233,7 +233,7 @@ public class MainActivity extends AppCompatActivity {
         navDownload.setOnClickListener(v -> switchSection(SEC_DOWNLOAD));
         navSettings.setOnClickListener(v -> switchSection(SEC_SETTINGS));
 
-        // 首页 / 历史 / 收藏 / 设置 同级：整页右滑始终呼出侧边栏
+        // 主页 / 历史 / 收藏 / 设置 同级：整页右滑始终呼出侧边栏
         drawer.setOnSwipeRightListener(() -> {
             if (drawer.isDrawerOpen(GravityCompat.START)) {
                 drawer.closeDrawer(GravityCompat.START);
@@ -245,6 +245,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void switchSection(int which) {
         collapseSearch();
+        if (which == SEC_HOME) {
+            // 从侧边栏回到主页：退出搜索态，恢复推荐流
+            keyword = "";
+            searchResults.clear();
+        }
         showSection(which);
     }
 
@@ -637,31 +642,33 @@ public class MainActivity extends AppCompatActivity {
 
     private void applyHeader(int which) {
         int icon;
-        int title;
+        CharSequence title;
         switch (which) {
             case SEC_HISTORY:
                 icon = R.drawable.ic_history_solid;
-                title = R.string.history_chip;
+                title = getString(R.string.history_chip);
                 break;
             case SEC_FAV:
                 icon = R.drawable.ic_favorite;
-                title = R.string.tab_fav;
+                title = getString(R.string.tab_fav);
                 break;
             case SEC_DOWNLOAD:
                 icon = R.drawable.ic_download;
-                title = R.string.tab_download;
+                title = getString(R.string.tab_download);
                 break;
             case SEC_PROFILE:
                 icon = R.drawable.ic_person;
-                title = R.string.tab_profile;
+                title = getString(R.string.tab_profile);
                 break;
             case SEC_SETTINGS:
                 icon = R.drawable.ic_settings;
-                title = R.string.settings_title;
+                title = getString(R.string.settings_title);
                 break;
             default:
                 icon = R.drawable.ic_menu;
-                title = R.string.home_title;
+                title = keyword.isEmpty()
+                        ? getString(R.string.home_title)
+                        : getString(R.string.search_title, keyword);
                 break;
         }
         btnHeader.setImageResource(icon);
@@ -939,11 +946,15 @@ public class MainActivity extends AppCompatActivity {
         }
         suppressImeCollapse = true;
         hideKeyboard();
+        // 先写入关键词，让标题立即变成「搜索：xxx」
+        keyword = q;
         if (section != SEC_HOME) {
             section = SEC_HOME;
         }
         showSection(SEC_HOME);
         doSearch(q, true);
+        // 搜索开始后自动收起搜索框，回到圆形按钮状态
+        collapseSearch();
         searchInput.postDelayed(() -> suppressImeCollapse = false, 700);
     }
 
@@ -1109,7 +1120,7 @@ public class MainActivity extends AppCompatActivity {
         loading.setVisibility(View.GONE);
     }
 
-    // ------------------------------------------------------------ 首页推荐
+    // ------------------------------------------------------------ 主页推荐
 
     private void loadHome(boolean force) {
         if (homeLoading || !prefs.homeRecommend()) {
