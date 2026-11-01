@@ -328,7 +328,8 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         searchExpanded = true;
-        searchFab.animate().scaleX(0f).scaleY(0f).alpha(0f).setDuration(140).start();
+        searchFab.animate().scaleX(0f).scaleY(0f).alpha(0f).setDuration(140)
+                .withEndAction(() -> searchFab.setVisibility(View.GONE)).start();
         searchBarExpanded.setVisibility(View.VISIBLE);
         searchBarExpanded.post(() -> {
             int w = searchBarExpanded.getWidth();
@@ -390,6 +391,9 @@ public class MainActivity extends AppCompatActivity {
         } else {
             searchBarExpanded.setVisibility(View.GONE);
             searchFab.setVisibility(View.VISIBLE);
+            searchFab.setScaleX(1f);
+            searchFab.setScaleY(1f);
+            searchFab.setAlpha(1f);
         }
     }
 
