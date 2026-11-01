@@ -682,9 +682,12 @@ public class MainActivity extends AppCompatActivity {
         int color = ContextCompat.getColor(this, R.color.on_surface);
         if (icon == 0) {
             // 主页：三横 ↔ 叉 的可动画图标
+            boolean searching = !keyword.isEmpty();
             btnHeader.setImageDrawable(headerMorph);
             btnHeader.setColorFilter(color);
-            animateHeaderMorph(!keyword.isEmpty());
+            btnHeader.setContentDescription(getString(
+                    searching ? R.string.cancel : R.string.menu));
+            animateHeaderMorph(searching);
         } else {
             btnHeader.setImageResource(icon);
             btnHeader.setColorFilter(color);
