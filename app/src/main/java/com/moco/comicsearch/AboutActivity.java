@@ -62,7 +62,9 @@ public class AboutActivity extends SwipeBackActivity {
             versionDot.setVisibility(UpdateChecker.hasUpdate() ? View.VISIBLE : View.GONE);
             if (r == null || !r.ok) {
                 if (manual) {
-                    Ui.toast(this, getString(R.string.check_update_failed));
+                    Ui.toast(this, getString(r != null && r.code == 404
+                            ? R.string.update_repo_private
+                            : R.string.check_update_failed));
                 }
                 return;
             }

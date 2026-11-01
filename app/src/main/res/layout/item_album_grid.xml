@@ -44,6 +44,7 @@
         android:textColor="@color/on_surface"
         android:textSize="13sp"
         android:lineSpacingExtra="1dp"
+        android:lines="2"
         android:maxLines="2"
         android:ellipsize="end" />
 
@@ -63,13 +64,25 @@
             android:textSize="11sp"
             android:singleLine="true"
             android:ellipsize="end" />
+    </LinearLayout>
 
-        <com.moco.comicsearch.RingProgressView
-            android:id="@+id/downloadRing"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_marginStart="6dp"
-            android:visibility="gone" />
+    <LinearLayout
+        android:id="@+id/downloadRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/downloadProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:max="100"
+            android:progressBackgroundTint="@color/divider"
+            android:progressTint="?attr/colorPrimary" />
     </LinearLayout>
 
     <LinearLayout

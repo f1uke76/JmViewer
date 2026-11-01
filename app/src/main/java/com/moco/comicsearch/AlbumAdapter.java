@@ -188,14 +188,6 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
                 }
             }
         }
-        if (h.downloadRing != null) {
-            if (grid && downloading) {
-                h.downloadRing.setVisibility(View.VISIBLE);
-                h.downloadRing.setProgress(a.progress);
-            } else {
-                h.downloadRing.setVisibility(View.GONE);
-            }
-        }
 
         if (grid) {
             // 封面方式：按两列宽度算高度，保持 3:4（扣除外边距 12dp 与内边距 16dp）
@@ -304,7 +296,6 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         ImageView btnTrash;
         ImageView btnDownload;
         ProgressBar downloadProgress;
-        RingProgressView downloadRing;
         View downloadRow;
 
         VH(@NonNull View v) {
@@ -318,7 +309,6 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             btnTrash = v.findViewById(R.id.btnTrash);
             btnDownload = v.findViewById(R.id.btnDownload);
             downloadProgress = v.findViewById(R.id.downloadProgress);
-            downloadRing = v.findViewById(R.id.downloadRing);
             downloadRow = v.findViewById(R.id.downloadRow);
         }
     }

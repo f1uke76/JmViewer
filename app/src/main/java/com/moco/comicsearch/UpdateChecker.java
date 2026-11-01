@@ -11,16 +11,21 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/** 通过 GitHub Release 检测新版本。 */
+/** 通过 GitHub Release 检测新版本。API 不可用时回退到 releases 页面。 */
 public class UpdateChecker {
 
     public static final String API =
             "https://api.github.com/repos/haowen76/JmViewer/releases/latest";
+    public static final String LATEST_PAGE =
+            "https://github.com/haowen76/JmViewer/releases/latest";
 
     public static class Result {
         public boolean ok;
         public boolean newer;
+        public int code;
         public String version = "";
         public String url = "";
         public String notes = "";
@@ -47,35 +52,82 @@ public class UpdateChecker {
 
     public static void check(Context ctx, Callback cb) {
         new Thread(() -> {
-            Result r = new Result();
-            try {
-                HttpURLConnection conn = (HttpURLConnection) new URL(API).openConnection();
-                conn.setConnectTimeout(8000);
-                conn.setReadTimeout(8000);
-                conn.setRequestProperty("User-Agent", "JmViewer/" + BuildConfig.VERSION_NAME);
-                conn.setRequestProperty("Accept", "application/vnd.github+json");
-                if (conn.getResponseCode() == 200) {
-                    StringBuilder sb = new StringBuilder();
-                    try (BufferedReader br = new BufferedReader(new InputStreamReader(
-                            conn.getInputStream(), StandardCharsets.UTF_8))) {
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            sb.append(line);
-                        }
-                    }
-                    JSONObject o = new JSONObject(sb.toString());
-                    r.version = trimV(o.optString("tag_name"));
-                    r.url = o.optString("html_url");
-                    r.notes = o.optString("body");
-                    r.ok = !r.version.isEmpty();
-                    r.newer = r.ok && compare(r.version, BuildConfig.VERSION_NAME) > 0;
+            Result r = fetchApi();
+            if (!r.ok) {
+                Result html = fetchHtml();
+                if (html.ok) {
+                    r = html;
                 }
-                conn.disconnect();
-            } catch (Exception ignored) {
             }
-            latest = r;
-            MAIN.post(() -> cb.onResult(r));
+            final Result result = r;
+            latest = result;
+            MAIN.post(() -> cb.onResult(result));
         }, "update-check").start();
+    }
+
+    private static Result fetchApi() {
+        Result r = new Result();
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(API).openConnection();
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(8000);
+            conn.setRequestProperty("User-Agent", "JmViewer/" + BuildConfig.VERSION_NAME);
+            conn.setRequestProperty("Accept", "application/vnd.github+json");
+            int code = conn.getResponseCode();
+            r.code = code;
+            if (code == 200) {
+                StringBuilder sb = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                        conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        sb.append(line);
+                    }
+                }
+                JSONObject o = new JSONObject(sb.toString());
+                r.version = trimV(o.optString("tag_name"));
+                r.url = o.optString("html_url");
+                r.notes = o.optString("body");
+                r.ok = !r.version.isEmpty();
+                r.newer = r.ok && compare(r.version, BuildConfig.VERSION_NAME) > 0;
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+        return r;
+    }
+
+    /** API 被限流 / 被墙时，从 releases/latest 跳转后的 /tag/xxx 地址取版本号。 */
+    private static Result fetchHtml() {
+        Result r = new Result();
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(LATEST_PAGE).openConnection();
+            conn.setInstanceFollowRedirects(true);
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(8000);
+            conn.setRequestProperty("User-Agent",
+                    "Mozilla/5.0 (Linux; Android 14) JmViewer/" + BuildConfig.VERSION_NAME);
+            r.code = conn.getResponseCode();
+            String finalUrl = conn.getURL().toString();
+            Matcher m = Pattern.compile("/releases/tag/([^/?#]+)").matcher(finalUrl);
+            if (m.find()) {
+                r.version = trimV(m.group(1));
+                r.url = finalUrl;
+                r.ok = !r.version.isEmpty();
+                r.newer = r.ok && compare(r.version, BuildConfig.VERSION_NAME) > 0;
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+        return r;
     }
 
     public static String trimV(String v) {

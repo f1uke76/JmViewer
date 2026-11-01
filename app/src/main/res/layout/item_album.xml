@@ -49,7 +49,9 @@
             android:textColor="@color/on_surface"
             android:textSize="15sp"
             android:lineSpacingExtra="2dp"
+            android:lines="2"
             android:maxLines="2"
+            android:gravity="top"
             android:ellipsize="end" />
 
         <TextView
@@ -84,16 +86,18 @@
                     android:layout_width="0dp"
                     android:layout_height="4dp"
                     android:layout_weight="1"
+                    android:layout_gravity="center_vertical"
                     android:max="100"
                     android:progressBackgroundTint="@color/divider"
                     android:progressTint="?attr/colorPrimary" />
 
                 <ImageView
                     android:id="@+id/btnDownload"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
                     android:layout_marginStart="6dp"
-                    android:padding="7dp"
+                    android:layout_gravity="center_vertical"
+                    android:padding="6dp"
                     android:src="@drawable/ic_download"
                     android:contentDescription="@string/download"
                     android:clickable="true"
