@@ -321,13 +321,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void switchSection(int which) {
-        collapseSearch();
+        // 侧边栏切页：搜索框直接收起（不播放收回动画），键盘一并隐藏
+        if (searchExpanded) {
+            resetSearchImmediate();
+        }
         if (which == SEC_HOME) {
             // 从侧边栏回到主页：退出搜索态，恢复推荐流
             keyword = "";
             searchResults.clear();
         }
         showSection(which);
+    }
+
+    /** 立即收起搜索框（无动画），用于侧边栏切页。 */
+    private void resetSearchImmediate() {
+        searchExpanded = false;
+        hideKeyboard();
+        searchInput.clearFocus();
+        searchInput.setText("");
+        hideSearchHistory();
+        searchBarExpanded.setVisibility(View.GONE);
+        searchBarExpanded.setScaleX(1f);
+        searchBarExpanded.setScaleY(1f);
+        searchBarExpanded.setAlpha(1f);
+        searchBarExpanded.setTranslationX(0f);
+        searchBarExpanded.setTranslationY(0f);
+        searchFab.setVisibility(View.GONE);
     }
 
     private void setupSearch() {
@@ -1067,6 +1086,12 @@ public class MainActivity extends AppCompatActivity {
                     ? R.drawable.ic_deselect_all : R.drawable.ic_select_all);
             btnSelAll.setContentDescription(getString(
                     all ? R.string.deselect_all : R.string.select_all));
+            // 全选：主题色底 + 白勾；全不选：白底 + 主题色勾
+            btnSelAll.setBackgroundResource(all
+                    ? R.drawable.bg_circle_surface : R.drawable.bg_circle_primary);
+            btnSelAll.setColorFilter(all
+                    ? ThemeManager.primary(this)
+                    : ContextCompat.getColor(this, R.color.white));
         }
         btnSelExport.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
         btnSelStart.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);

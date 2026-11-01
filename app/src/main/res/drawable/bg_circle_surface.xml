@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 全不选按钮底色：白底（深色主题为表面色），加一圈描边保证可见 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/surface" />
+    <stroke
+        android:width="1dp"
+        android:color="@color/divider" />
+</shape>
