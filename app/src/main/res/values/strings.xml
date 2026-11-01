@@ -196,6 +196,7 @@
     <string name="confirm_delete_selected">确定删除选中的 %1$d 项？</string>
     <string name="download_pause">暂停下载</string>
     <string name="select_all">全选</string>
+    <string name="deselect_all">全不选</string>
 
     <!-- 0.3.9 -->
     <string name="import_export">导入与导出</string>

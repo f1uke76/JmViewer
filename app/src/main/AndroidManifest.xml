@@ -167,6 +167,10 @@
         <activity
             android:name=".ImportExportActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".ReleaseNotesActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -34,14 +34,6 @@
             android:background="@drawable/bg_check_circle"
             android:visibility="gone"
             android:contentDescription="@null" />
-
-        <com.moco.comicsearch.RingProgressView
-            android:id="@+id/downloadRing"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
-            android:layout_gravity="bottom|end"
-            android:layout_margin="6dp"
-            android:visibility="gone" />
     </FrameLayout>
 
     <TextView
@@ -55,15 +47,30 @@
         android:maxLines="2"
         android:ellipsize="end" />
 
-    <TextView
-        android:id="@+id/meta"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="@color/muted"
-        android:textSize="11sp"
-        android:singleLine="true"
-        android:ellipsize="end" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/meta"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/muted"
+            android:textSize="11sp"
+            android:singleLine="true"
+            android:ellipsize="end" />
+
+        <com.moco.comicsearch.RingProgressView
+            android:id="@+id/downloadRing"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="6dp"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/tags"

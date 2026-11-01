@@ -118,8 +118,17 @@ public class SmokeTest {
                 Robolectric.buildActivity(AboutActivity.class).setup();
         Activity a = c.get();
         assertNotNull(a.findViewById(R.id.versionValue));
-        assertNotNull(a.findViewById(R.id.notesView));
+        assertNotNull(a.findViewById(R.id.rowReleaseNotes));
         assertNotNull(a.findViewById(R.id.swAutoCheck));
+        c.pause().stop().destroy();
+    }
+
+    @Test
+    public void release_notes_activity_inflates() {
+        ActivityController<ReleaseNotesActivity> c =
+                Robolectric.buildActivity(ReleaseNotesActivity.class).setup();
+        Activity a = c.get();
+        assertNotNull(a.findViewById(R.id.notesView));
         c.pause().stop().destroy();
     }
 

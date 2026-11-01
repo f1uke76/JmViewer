@@ -304,6 +304,23 @@ public class DownloadManager {
             File tmp = new File(ctx.getCacheDir(), "dl_" + t.albumId);
             //noinspection ResultOfMethodCallIgnored
             tmp.mkdirs();
+            File rawDir = new File(ctx.getCacheDir(), "raw");
+            //noinspection ResultOfMethodCallIgnored
+            rawDir.mkdirs();
+
+            // 先统计已有缓存：上次下载的临时图 + 阅读/详情页缓存的原始图。
+            // 这些页面不需要再走网络，进度直接从缓存量开始。
+            int cached = 0;
+            for (int i = 0; i < content.pages.size(); i++) {
+                Models.PageImage p = content.pages.get(i);
+                File out = new File(tmp, String.format(Locale.ROOT, "%05d.jpg", i + 1));
+                File raw = new File(rawDir, content.aid + "_" + p.name);
+                if ((out.exists() && out.length() > 0) || (raw.exists() && raw.length() > 0)) {
+                    cached++;
+                }
+            }
+            t.done = cached;
+            update(t);
 
             for (int i = 0; i < content.pages.size(); i++) {
                 if (Boolean.TRUE.equals(pauseFlags.get(t.albumId))) {
@@ -314,13 +331,14 @@ public class DownloadManager {
                 Models.PageImage p = content.pages.get(i);
                 File out = new File(tmp, String.format(Locale.ROOT, "%05d.jpg", i + 1));
                 if (!out.exists() || out.length() == 0) {
-                    byte[] data = site.getBytes(p.url);
-                    // 同步写入图片缓存，详情页 / 阅读器可直接命中
-                    File rawDir = new File(ctx.getCacheDir(), "raw");
-                    //noinspection ResultOfMethodCallIgnored
-                    rawDir.mkdirs();
                     File rawFile = new File(rawDir, content.aid + "_" + p.name);
-                    if (!rawFile.exists() || rawFile.length() == 0) {
+                    byte[] data = null;
+                    if (rawFile.exists() && rawFile.length() > 0) {
+                        // 直接复用已经缓存的图片，不再重复下载，省流量
+                        data = java.nio.file.Files.readAllBytes(rawFile.toPath());
+                    }
+                    if (data == null) {
+                        data = site.getBytes(p.url);
                         try (FileOutputStream fos = new FileOutputStream(rawFile)) {
                             fos.write(data);
                         }
@@ -333,7 +351,7 @@ public class DownloadManager {
                         bmp.recycle();
                     }
                 }
-                t.done = i + 1;
+                t.done = Math.max(t.done, i + 1);
                 update(t);
             }
 

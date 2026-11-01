@@ -76,7 +76,8 @@ public class MainActivity extends AppCompatActivity {
     private HamburgerDrawable headerMorph;
     private ImageView searchFab;
     private View selectionBar;
-    private View btnSelAll, btnSelStart, btnSelPause, btnSelDelete;
+    private ImageView btnSelAll;
+    private View btnSelStart, btnSelPause, btnSelDelete;
     private boolean selectionMode = false;
     private boolean selectionUiShown = false;
     private final java.util.Set<String> selectedIds = new java.util.HashSet<>();
@@ -229,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         searchFab.setOnClickListener(v -> expandSearch());
-        btnSelAll.setOnClickListener(v -> selectAll());
+        btnSelAll.setOnClickListener(v -> toggleSelectAll());
         btnSelStart.setOnClickListener(v -> startSelected());
         btnSelPause.setOnClickListener(v -> pauseSelected());
         btnSelDelete.setOnClickListener(v -> deleteSelected());
@@ -892,6 +893,27 @@ public class MainActivity extends AppCompatActivity {
         applySelectionUi();
     }
 
+    private boolean allSelected() {
+        if (adapter == null || adapter.items().isEmpty()) {
+            return false;
+        }
+        for (Models.Album a : adapter.items()) {
+            if (!selectedIds.contains(a.id)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 未全选时全选，已全选时全不选（退出多选）。 */
+    private void toggleSelectAll() {
+        if (allSelected()) {
+            exitSelection();
+        } else {
+            selectAll();
+        }
+    }
+
     private void toggleSelection(Models.Album album) {
         if (album == null) {
             return;
@@ -921,6 +943,13 @@ public class MainActivity extends AppCompatActivity {
         }
         boolean download = section == SEC_DOWNLOAD;
         btnSelAll.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
+        if (selectionMode) {
+            boolean all = allSelected();
+            btnSelAll.setImageResource(all
+                    ? R.drawable.ic_deselect_all : R.drawable.ic_select_all);
+            btnSelAll.setContentDescription(getString(
+                    all ? R.string.deselect_all : R.string.select_all));
+        }
         btnSelStart.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
         btnSelPause.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
         if (selectionMode != selectionUiShown) {

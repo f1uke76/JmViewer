@@ -240,30 +240,26 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
                 h.btnTrash.setVisibility(View.GONE);
             }
         }
+        if (h.downloadRow != null) {
+            boolean rowVisible = (showProgress && a.progress >= 0)
+                    || (showDownload && !showProgress);
+            h.downloadRow.setVisibility(rowVisible ? View.VISIBLE : View.GONE);
+        }
         if (h.downloadProgress != null) {
-            if (showProgress && a.progress >= 0) {
-                h.downloadProgress.setVisibility(View.VISIBLE);
+            boolean pVisible = showProgress && a.progress >= 0;
+            h.downloadProgress.setVisibility(pVisible ? View.VISIBLE : View.GONE);
+            if (pVisible) {
                 h.downloadProgress.setProgress(a.progress);
-            } else {
-                h.downloadProgress.setVisibility(View.GONE);
             }
         }
         if (h.btnDownload != null) {
-            boolean show = false;
-            if (showDownload) {
-                if (showProgress) {
-                    if (a.progress >= 0) {
-                        show = true;
-                        h.btnDownload.setImageResource(a.downloadState == 1
-                                ? R.drawable.ic_pause : R.drawable.ic_play);
-                    }
-                } else {
-                    show = true;
-                    h.btnDownload.setImageResource(R.drawable.ic_download);
-                }
-            }
+            boolean show = (showProgress && a.progress >= 0)
+                    || (showDownload && !showProgress);
             if (show) {
                 h.btnDownload.setVisibility(View.VISIBLE);
+                h.btnDownload.setImageResource(showProgress
+                        ? (a.downloadState == 1 ? R.drawable.ic_pause : R.drawable.ic_play)
+                        : R.drawable.ic_download);
                 h.btnDownload.setColorFilter(ThemeManager.primary(h.itemView.getContext()));
                 h.btnDownload.setOnClickListener(v -> listener.onDownload(a));
             } else {
@@ -309,6 +305,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         ImageView btnDownload;
         ProgressBar downloadProgress;
         RingProgressView downloadRing;
+        View downloadRow;
 
         VH(@NonNull View v) {
             super(v);
@@ -322,6 +319,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             btnDownload = v.findViewById(R.id.btnDownload);
             downloadProgress = v.findViewById(R.id.downloadProgress);
             downloadRing = v.findViewById(R.id.downloadRing);
+            downloadRow = v.findViewById(R.id.downloadRow);
         }
     }
 }

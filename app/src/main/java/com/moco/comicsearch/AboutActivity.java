@@ -8,16 +8,11 @@ import android.widget.TextView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
-/** 关于软件：版本、版本说明、检查更新、启动检查更新开关。 */
+/** 关于软件：版本、版本说明入口、检查更新、启动检查更新开关。 */
 public class AboutActivity extends SwipeBackActivity {
 
     private Prefs prefs;
     private TextView versionValue;
-    private TextView notesView;
     private View versionDot;
     private PillSwitch swAutoCheck;
     private boolean checking;
@@ -32,7 +27,6 @@ public class AboutActivity extends SwipeBackActivity {
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         versionValue = findViewById(R.id.versionValue);
         versionDot = findViewById(R.id.versionDot);
-        notesView = findViewById(R.id.notesView);
         swAutoCheck = findViewById(R.id.swAutoCheck);
 
         versionValue.setText(BuildConfig.VERSION_NAME);
@@ -41,8 +35,9 @@ public class AboutActivity extends SwipeBackActivity {
         findViewById(R.id.rowAutoCheck).setOnClickListener(v ->
                 swAutoCheck.setChecked(!swAutoCheck.isChecked(), true));
         findViewById(R.id.rowCheckUpdate).setOnClickListener(v -> checkUpdate(true));
+        findViewById(R.id.rowReleaseNotes).setOnClickListener(v ->
+                startActivity(new Intent(this, ReleaseNotesActivity.class)));
 
-        notesView.setText(readNotes());
         checkUpdate(false);
     }
 
@@ -97,43 +92,5 @@ public class AboutActivity extends SwipeBackActivity {
         } catch (Exception e) {
             Ui.toast(this, getString(R.string.browser_open_failed));
         }
-    }
-
-    private String readNotes() {
-        try (InputStream is = getAssets().open("README.md")) {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            byte[] buf = new byte[8192];
-            int n;
-            while ((n = is.read(buf)) > 0) {
-                bos.write(buf, 0, n);
-            }
-            return stripMarkdown(new String(bos.toByteArray(), StandardCharsets.UTF_8));
-        } catch (Exception e) {
-            return getString(R.string.about_text);
-        }
-    }
-
-    private static String stripMarkdown(String md) {
-        if (md == null) {
-            return "";
-        }
-        StringBuilder out = new StringBuilder();
-        for (String raw : md.split("\n", -1)) {
-            String line = raw.trim();
-            if (line.equals("---") || line.equals("***")) {
-                continue;
-            }
-            line = line.replaceAll("^#{1,6}\\s*", "");
-            line = line.replaceAll("^>\\s*", "");
-            line = line.replaceAll("^[-*+]\\s+", "· ");
-            line = line.replace("**", "").replace("__", "").replace("`", "");
-            line = line.replaceAll("\\[([^\\]]+)\\]\\([^)]+\\)", "$1");
-            if (line.startsWith("|") || line.endsWith("|")) {
-                line = line.replaceAll("^\\|", "").replaceAll("\\|$", "")
-                        .replace("|", " · ").trim();
-            }
-            out.append(line).append('\n');
-        }
-        return out.toString().replaceAll("\n{3,}", "\n\n").trim();
     }
 }
