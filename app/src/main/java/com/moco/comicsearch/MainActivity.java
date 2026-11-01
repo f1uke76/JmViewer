@@ -1,6 +1,8 @@
 package com.moco.comicsearch;
 
 import android.annotation.SuppressLint;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -11,8 +13,12 @@ import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewAnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -68,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
     private View selectionBar;
     private View btnSelStart, btnSelPause, btnSelDelete;
     private boolean selectionMode = false;
+    private boolean selectionUiShown = false;
     private final java.util.Set<String> selectedIds = new java.util.HashSet<>();
     private View searchBarExpanded;
     private EditText searchInput;
@@ -296,12 +303,22 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         searchExpanded = true;
-        searchFab.setVisibility(View.GONE);
+        searchFab.animate().scaleX(0f).scaleY(0f).alpha(0f).setDuration(140).start();
         searchBarExpanded.setVisibility(View.VISIBLE);
-        searchBarExpanded.setPivotX(getResources().getDisplayMetrics().widthPixels);
-        searchBarExpanded.setScaleX(0.25f);
-        searchBarExpanded.setAlpha(0f);
-        searchBarExpanded.animate().scaleX(1f).alpha(1f).setDuration(180).start();
+        searchBarExpanded.post(() -> {
+            int w = searchBarExpanded.getWidth();
+            int h = searchBarExpanded.getHeight();
+            if (w > 0 && h > 0) {
+                float cx = w - dp(30);
+                float cy = h / 2f;
+                float end = (float) Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy));
+                Animator reveal = ViewAnimationUtils.createCircularReveal(
+                        searchBarExpanded, (int) cx, (int) cy, 0f, end);
+                reveal.setDuration(260);
+                reveal.setInterpolator(new DecelerateInterpolator());
+                reveal.start();
+            }
+        });
         searchInput.requestFocus();
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         if (imm != null) {
@@ -322,8 +339,33 @@ public class MainActivity extends AppCompatActivity {
         searchInput.clearFocus();
         hideSearchHistory();
         searchInput.setText("");
-        searchBarExpanded.setVisibility(View.GONE);
-        searchFab.setVisibility(View.VISIBLE);
+        int w = searchBarExpanded.getWidth();
+        int h = searchBarExpanded.getHeight();
+        if (w > 0 && h > 0) {
+            float cx = w - dp(30);
+            float cy = h / 2f;
+            float start = (float) Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy));
+            Animator reveal = ViewAnimationUtils.createCircularReveal(
+                    searchBarExpanded, (int) cx, (int) cy, start, 0f);
+            reveal.setDuration(220);
+            reveal.setInterpolator(new AccelerateInterpolator());
+            reveal.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    searchBarExpanded.setVisibility(View.GONE);
+                    searchFab.setVisibility(View.VISIBLE);
+                    searchFab.setScaleX(0f);
+                    searchFab.setScaleY(0f);
+                    searchFab.setAlpha(0f);
+                    searchFab.animate().scaleX(1f).scaleY(1f).alpha(1f)
+                            .setDuration(180).start();
+                }
+            });
+            reveal.start();
+        } else {
+            searchBarExpanded.setVisibility(View.GONE);
+            searchFab.setVisibility(View.VISIBLE);
+        }
     }
 
     private void setupList() {
@@ -450,8 +492,11 @@ public class MainActivity extends AppCompatActivity {
             selectionMode = false;
             selectedIds.clear();
         }
+        selectionUiShown = false;
         if (selectionBar != null) {
             selectionBar.setVisibility(View.GONE);
+            selectionBar.setAlpha(1f);
+            selectionBar.setTranslationY(0f);
         }
         if (adapter != null) {
             adapter.setSelectionMode(false);
@@ -472,6 +517,11 @@ public class MainActivity extends AppCompatActivity {
 
         boolean showFab = which == SEC_HOME;
         searchFab.setVisibility(showFab && !searchExpanded ? View.VISIBLE : View.GONE);
+        if (showFab && !searchExpanded) {
+            searchFab.setScaleX(1f);
+            searchFab.setScaleY(1f);
+            searchFab.setAlpha(1f);
+        }
         if (!listSection) {
             searchExpanded = false;
             searchBarExpanded.setVisibility(View.GONE);
@@ -724,10 +774,13 @@ public class MainActivity extends AppCompatActivity {
             adapter.setSelectionMode(selectionMode);
             adapter.setSelectedIds(selectedIds);
         }
-        selectionBar.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         boolean download = section == SEC_DOWNLOAD;
         btnSelStart.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
         btnSelPause.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
+        if (selectionMode != selectionUiShown) {
+            selectionUiShown = selectionMode;
+            animateSelectionBar(selectionMode);
+        }
         if (selectionMode) {
             searchFab.setVisibility(View.GONE);
             searchBarExpanded.setVisibility(View.GONE);
@@ -739,7 +792,44 @@ public class MainActivity extends AppCompatActivity {
             applyHeader(section);
             boolean showFab = section == SEC_HOME && !searchExpanded;
             searchFab.setVisibility(showFab ? View.VISIBLE : View.GONE);
+            if (showFab) {
+                searchFab.setScaleX(1f);
+                searchFab.setScaleY(1f);
+                searchFab.setAlpha(1f);
+            }
         }
+    }
+
+    private void animateSelectionBar(boolean show) {
+        if (show) {
+            selectionBar.setVisibility(View.VISIBLE);
+            selectionBar.setAlpha(1f);
+            selectionBar.setTranslationY(0f);
+            animateSelButton(btnSelStart, 0);
+            animateSelButton(btnSelPause, 55);
+            animateSelButton(btnSelDelete, 110);
+        } else {
+            selectionBar.animate().alpha(0f).translationY(dp(70)).setDuration(160)
+                    .setInterpolator(new AccelerateInterpolator())
+                    .withEndAction(() -> {
+                        selectionBar.setVisibility(View.GONE);
+                        selectionBar.setAlpha(1f);
+                        selectionBar.setTranslationY(0f);
+                    }).start();
+        }
+    }
+
+    private void animateSelButton(View v, long delay) {
+        if (v.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        v.setTranslationY(dp(70));
+        v.setAlpha(0f);
+        v.setScaleX(0.7f);
+        v.setScaleY(0.7f);
+        v.animate().translationY(0f).alpha(1f).scaleX(1f).scaleY(1f)
+                .setStartDelay(delay).setDuration(240)
+                .setInterpolator(new OvershootInterpolator(1.1f)).start();
     }
 
     private void deleteSelected() {

@@ -51,6 +51,7 @@ public final class Ui {
 
             Toast toast = new Toast(ctx);
             toast.setDuration(Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.CENTER, 0, 0);
             toast.setView(box);
             toast.show();
         } catch (Exception e) {

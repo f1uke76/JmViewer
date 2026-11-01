@@ -10,8 +10,8 @@ android {
         applicationId "com.moco.comicsearch"
         minSdk 26
         targetSdk 34
-        versionCode 20
-        versionName "0.3.6"
+        versionCode 21
+        versionName "0.3.7"
     }
 
     signingConfigs {
@@ -29,6 +29,7 @@ android {
         }
         release {
             minifyEnabled false
+            crunchPngs false
             signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
