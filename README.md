@@ -2,8 +2,6 @@
 
 安卓原生漫画客户端：在站点内搜索、原生阅读，支持编号搜索、收藏、历史与按作品管理图片缓存。
 
-> ~~版本号统一为 ~~**~~0.1 / 0.2 / 0.3 / 0.3.1 / 0.3.2 / 0.3.3 / 0.3.4 / 0.3.5 / 0.3.6 / 0.3.7 / 0.3.8 / 0.3.9~~**~~，此前的 1.0、2.0 已合并进 0.1。~~
-
 ---
 
 ## 版本记录
@@ -150,45 +148,6 @@
 - **详情**：大封面 + 标题 + 复制按钮 → 收藏 / 阅读 → 标签栏 → 三列预览图；进入即预加载，离开停止
 - **我的**：账号登录 / 退出
 - **设置**：外观、站点与分流、桌面图标、缓存管理、清除记录
-
----
-
-## ~~技术要点~~
-
-| 环节   | 做法                                                                   |
-| ---- | -------------------------------------------------------------------- |
-| 搜索解析 | `GET /search/photos?search_query=xxx&page=n`，Jsoup 解析 `div.list-col` |
-| 编号搜索 | 纯数字查询会被站点重定向到 `/album/{id}/`，用 `isAlbumPage()` 判断后按详情页解析             |
-| 详情解析 | `GET /album/{id}`，取标题、作者、标签、页数、章节列表                                  |
-| 阅读页  | `GET /photo/{aid}`，取 `div.scramble-page` 的图片地址与 `scramble_id`        |
-| 图片还原 | 复刻站点分块算法，见 `Scramble.java`                                           |
-| 图片缓存 | 原图字节写入 `cacheDir/raw/{aid}_{name}`，按 `aid` 前缀即可按作品统计 / 清除            |
-| 登录   | `POST /login`，Cookie 存 `CookieManager`，与 WebView 共享                  |
-| 收藏   | `POST /ajax/favorite_album`、`/ajax/delete_favorite_album`            |
-| 侧边栏  | `SwipeDrawerLayout` 继承 `DrawerLayout`，整页横向滑动检测后打开抽屉                  |
-
----
-
-## ~~构建~~
-
-需要 JDK 17 + Android SDK 34：
-
-```bash
-./gradlew assembleRelease      # 或 assembleDebug
-```
-
-签名配置在 `app/build.gradle`（`release.jks`，别名 / 密码均为 `comicsearch`），换成自己的 keystore 即可。
-
----
-
-## ~~测试~~
-
-```bash
-./gradlew testReleaseUnitTest
-```
-
-- `ParserTest`：用真实页面样本验证搜索页、详情页、阅读页解析
-- `SmokeTest`：Robolectric 跑起各 Activity，验证布局加载、抽屉切换、列表项渲染
 
 ---
 
