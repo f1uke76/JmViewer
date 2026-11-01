@@ -51,7 +51,8 @@ public final class Ui {
 
             Toast toast = new Toast(ctx);
             toast.setDuration(Toast.LENGTH_SHORT);
-            toast.setGravity(Gravity.CENTER, 0, 0);
+            int y = (int) (ctx.getResources().getDisplayMetrics().density * 120);
+            toast.setGravity(Gravity.BOTTOM, 0, y);
             toast.setView(box);
             toast.show();
         } catch (Exception e) {

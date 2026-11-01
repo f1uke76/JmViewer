@@ -7,6 +7,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -100,6 +101,8 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private boolean webMode = false;
     private boolean searchExpanded = false;
+    private boolean imeWasVisible = false;
+    private boolean suppressImeCollapse = false;
 
     private int section = SEC_HOME;
     private String keyword = "";
@@ -294,6 +297,28 @@ public class MainActivity extends AppCompatActivity {
             prefs.clearHistory();
             hideSearchHistory();
             Ui.toast(this, this.getString(R.string.history_cleared));
+        });
+
+        // 系统返回手势收起键盘时，搜索框跟着收回成圆形按钮
+        final View rootView = findViewById(android.R.id.content);
+        rootView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            if (!searchExpanded) {
+                imeWasVisible = false;
+                return;
+            }
+            Rect r = new Rect();
+            rootView.getWindowVisibleDisplayFrame(r);
+            int screenHeight = rootView.getRootView().getHeight();
+            int keypadHeight = screenHeight - r.bottom;
+            boolean visible = keypadHeight > screenHeight * 0.15;
+            if (visible) {
+                imeWasVisible = true;
+            } else if (imeWasVisible) {
+                imeWasVisible = false;
+                if (searchExpanded && !suppressImeCollapse) {
+                    collapseSearch();
+                }
+            }
         });
     }
 
@@ -908,12 +933,14 @@ public class MainActivity extends AppCompatActivity {
         if (q.isEmpty()) {
             return;
         }
+        suppressImeCollapse = true;
         hideKeyboard();
         if (section != SEC_HOME) {
             section = SEC_HOME;
         }
         showSection(SEC_HOME);
         doSearch(q, true);
+        searchInput.postDelayed(() -> suppressImeCollapse = false, 700);
     }
 
     private void doSearch(String q, boolean reset) {
@@ -1026,6 +1053,10 @@ public class MainActivity extends AppCompatActivity {
         refresh.setRefreshing(false);
         loading.setVisibility(View.GONE);
 
+        if (section != SEC_HOME) {
+            return;
+        }
+
         if (error != null && reqPage == 1) {
             showEmpty(getString(R.string.load_failed), error);
             return;
@@ -1065,6 +1096,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showEmpty(String title, String msg) {
+        if (section != SEC_HOME && section != SEC_HISTORY && section != SEC_FAV) {
+            return;
+        }
         emptyTitle.setText(title);
         emptyMsg.setText(msg);
         emptyView.setVisibility(View.VISIBLE);
@@ -1102,11 +1136,13 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 if (result.isEmpty()) {
-                    if (err != null) {
-                        showEmpty(getString(R.string.home_recommend_failed), err);
-                    } else {
-                        showEmpty(getString(R.string.search_empty_title),
-                                getString(R.string.search_empty_msg));
+                    if (section == SEC_HOME) {
+                        if (err != null) {
+                            showEmpty(getString(R.string.home_recommend_failed), err);
+                        } else {
+                            showEmpty(getString(R.string.search_empty_title),
+                                    getString(R.string.search_empty_msg));
+                        }
                     }
                     return;
                 }
