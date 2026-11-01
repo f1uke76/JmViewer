@@ -43,6 +43,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsAnimationCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -117,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private boolean webMode = false;
     private boolean searchExpanded = false;
+    private boolean imeAnimating = false;
     private boolean imeWasVisible = false;
     private boolean suppressImeCollapse = false;
 
@@ -140,15 +142,38 @@ public class MainActivity extends AppCompatActivity {
         IconSwitcher.apply(this);
         setContentView(R.layout.activity_main);
         EdgeToEdge.padTop(findViewById(R.id.header));
-        // 底部同时避开导航栏与输入法：键盘弹出时搜索框跟着上移
+        // 底部同时避开导航栏与输入法：键盘动画期间逐帧跟随，搜索框与键盘同步上移
         final View contentFrame = findViewById(R.id.contentFrame);
         ViewCompat.setOnApplyWindowInsetsListener(contentFrame, (v, insets) -> {
-            Insets sb = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
-            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(),
-                    Math.max(sb.bottom, ime.bottom));
+            if (!imeAnimating) {
+                applyContentBottomInsets(contentFrame, insets);
+            }
             return insets;
         });
+        ViewCompat.setWindowInsetsAnimationCallback(contentFrame,
+                new WindowInsetsAnimationCompat.Callback(
+                        WindowInsetsAnimationCompat.Callback.DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                    @Override
+                    public void onPrepare(@NonNull WindowInsetsAnimationCompat animation) {
+                        if ((animation.getTypeMask() & WindowInsetsCompat.Type.ime()) != 0) {
+                            imeAnimating = true;
+                        }
+                    }
+
+                    @Override
+                    public WindowInsetsCompat onProgress(@NonNull WindowInsetsCompat insets,
+                                                         @NonNull List<WindowInsetsAnimationCompat> running) {
+                        applyContentBottomInsets(contentFrame, insets);
+                        return insets;
+                    }
+
+                    @Override
+                    public void onEnd(@NonNull WindowInsetsAnimationCompat animation) {
+                        if ((animation.getTypeMask() & WindowInsetsCompat.Type.ime()) != 0) {
+                            imeAnimating = false;
+                        }
+                    }
+                });
         ViewCompat.requestApplyInsets(contentFrame);
         EdgeToEdge.padVertical(findViewById(R.id.drawerContent));
 
@@ -497,6 +522,15 @@ public class MainActivity extends AppCompatActivity {
             searchFab.setScaleX(1f);
             searchFab.setScaleY(1f);
             searchFab.setAlpha(1f);
+        }
+    }
+
+    private void applyContentBottomInsets(View v, WindowInsetsCompat insets) {
+        Insets sb = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+        Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+        int bottom = Math.max(sb.bottom, ime.bottom);
+        if (v.getPaddingBottom() != bottom) {
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), bottom);
         }
     }
 
