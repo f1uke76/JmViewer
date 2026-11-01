@@ -30,6 +30,10 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         /** 缓存管理等场景下的垃圾桶删除，默认不处理。 */
         default void onTrash(Models.Album album) {
         }
+
+        /** 缓存管理等场景下的下载，默认不处理。 */
+        default void onDownload(Models.Album album) {
+        }
     }
 
     private final List<Models.Album> items = new ArrayList<>();
@@ -37,6 +41,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     private final Listener listener;
     private boolean grid = false;
     private boolean showTrash = false;
+    private boolean showDownload = false;
 
     public AlbumAdapter(ImageLoader loader, Listener listener) {
         this.loader = loader;
@@ -46,6 +51,11 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     /** 是否在每行右侧显示垃圾桶。 */
     public void setShowTrash(boolean show) {
         this.showTrash = show;
+    }
+
+    /** 是否在每行右侧显示下载按钮。 */
+    public void setShowDownload(boolean show) {
+        this.showDownload = show;
     }
 
     public void setGrid(boolean grid) {
@@ -182,6 +192,14 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
                 h.btnTrash.setVisibility(View.GONE);
             }
         }
+        if (h.btnDownload != null) {
+            if (showDownload) {
+                h.btnDownload.setVisibility(View.VISIBLE);
+                h.btnDownload.setOnClickListener(v -> listener.onDownload(a));
+            } else {
+                h.btnDownload.setVisibility(View.GONE);
+            }
+        }
     }
 
     private static int dp(View v, int value) {
@@ -217,6 +235,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         LinearLayout tags;
         ImageView btnCopy;
         ImageView btnTrash;
+        ImageView btnDownload;
 
         VH(@NonNull View v) {
             super(v);
@@ -226,6 +245,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             tags = v.findViewById(R.id.tags);
             btnCopy = v.findViewById(R.id.btnCopy);
             btnTrash = v.findViewById(R.id.btnTrash);
+            btnDownload = v.findViewById(R.id.btnDownload);
         }
     }
 }

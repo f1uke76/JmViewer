@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int SEC_FAV = 2;
     private static final int SEC_PROFILE = 3;
     private static final int SEC_SETTINGS = 4;
+    private static final int SEC_DOWNLOAD = 5;
 
     private Site site;
     private Prefs prefs;
@@ -57,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private final ExecutorService pool = Executors.newFixedThreadPool(3);
 
     private SwipeDrawerLayout drawer;
-    private View navHome, navHistory, navFav, navProfile, navSettings;
+    private View navHome, navHistory, navFav, navProfile, navSettings, navDownload;
     private TextView drawerSite;
     private TextView drawerVersion;
 
@@ -78,6 +79,14 @@ public class MainActivity extends AppCompatActivity {
     private SectionHeaderAdapter headerHist;
     private View settingsView;
     private SettingsPanel settingsPanel;
+    private RecyclerView downloadList;
+    private DownloadAdapter downloadAdapter;
+    private DownloadManager downloadManager;
+    private final DownloadManager.Listener downloadListener = () -> {
+        if (downloadAdapter != null && downloadManager != null) {
+            downloadAdapter.submit(downloadManager.tasks());
+        }
+    };
     private View loading;
     private TextView emptyTitle;
     private TextView emptyMsg;
@@ -115,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
         setupList();
         setupProfile();
         setupSettings();
+        setupDownloads();
         setupDrawer();
 
         int start = savedInstanceState == null
@@ -129,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
         navFav = findViewById(R.id.navFav);
         navProfile = findViewById(R.id.navProfile);
         navSettings = findViewById(R.id.navSettings);
+        navDownload = findViewById(R.id.navDownload);
         drawerSite = findViewById(R.id.drawerSite);
         drawerVersion = findViewById(R.id.drawerVersion);
 
@@ -143,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
         homeMark = findViewById(R.id.homeMark);
         profileList = findViewById(R.id.profileView);
         settingsView = findViewById(R.id.settingsView);
+        downloadList = findViewById(R.id.downloadList);
         loading = findViewById(R.id.loading);
         emptyTitle = findViewById(R.id.emptyTitle);
         emptyMsg = findViewById(R.id.emptyMsg);
@@ -192,6 +204,7 @@ public class MainActivity extends AppCompatActivity {
         navHistory.setOnClickListener(v -> switchSection(SEC_HISTORY));
         navFav.setOnClickListener(v -> switchSection(SEC_FAV));
         navProfile.setOnClickListener(v -> switchSection(SEC_PROFILE));
+        navDownload.setOnClickListener(v -> switchSection(SEC_DOWNLOAD));
         navSettings.setOnClickListener(v -> switchSection(SEC_SETTINGS));
 
         // 首页 / 历史 / 收藏 / 设置 同级：整页右滑始终呼出侧边栏
@@ -325,16 +338,37 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupProfile() {
-        profileList.setLayoutManager(new LinearLayoutManager(this));
         headerFav = new SectionHeaderAdapter();
         headerHist = new SectionHeaderAdapter();
         favAdapter = new AlbumAdapter(loader, newAlbumListener());
         histAdapter = new AlbumAdapter(loader, newAlbumListener());
-        profileList.setAdapter(new ConcatAdapter(headerFav, favAdapter, headerHist, histAdapter));
+        favAdapter.setGrid(true);
+        histAdapter.setGrid(true);
+        final ConcatAdapter concat =
+                new ConcatAdapter(headerFav, favAdapter, headerHist, histAdapter);
+        GridLayoutManager glm = new GridLayoutManager(this, 2);
+        glm.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            @Override
+            public int getSpanSize(int position) {
+                android.util.Pair<RecyclerView.Adapter<? extends RecyclerView.ViewHolder>, Integer>
+                        pair = concat.getWrappedAdapterAndPosition(position);
+                return pair.first instanceof SectionHeaderAdapter ? 2 : 1;
+            }
+        });
+        profileList.setLayoutManager(glm);
+        profileList.setAdapter(concat);
     }
 
     private void setupSettings() {
         settingsPanel = new SettingsPanel(this, settingsView, () -> showSection(section));
+    }
+
+    private void setupDownloads() {
+        downloadManager = DownloadManager.get(this);
+        downloadList.setLayoutManager(new LinearLayoutManager(this));
+        downloadAdapter = new DownloadAdapter(loader, downloadManager);
+        downloadList.setAdapter(downloadAdapter);
+        downloadAdapter.submit(downloadManager.tasks());
     }
 
     private AlbumAdapter.Listener newAlbumListener() {
@@ -378,13 +412,16 @@ public class MainActivity extends AppCompatActivity {
 
         boolean listSection = which == SEC_HOME || which == SEC_HISTORY || which == SEC_FAV;
         list.setVisibility(listSection ? View.VISIBLE : View.GONE);
-        refresh.setVisibility((which == SEC_PROFILE || which == SEC_SETTINGS) ? View.GONE : View.VISIBLE);
+        refresh.setVisibility((which == SEC_PROFILE || which == SEC_SETTINGS || which == SEC_DOWNLOAD)
+                ? View.GONE : View.VISIBLE);
         profileList.setVisibility(which == SEC_PROFILE ? View.VISIBLE : View.GONE);
         settingsView.setVisibility(which == SEC_SETTINGS ? View.VISIBLE : View.GONE);
+        downloadList.setVisibility(which == SEC_DOWNLOAD ? View.VISIBLE : View.GONE);
 
-        boolean showFab = listSection;
+        boolean showFab = which == SEC_HOME;
         searchFab.setVisibility(showFab && !searchExpanded ? View.VISIBLE : View.GONE);
         if (!listSection) {
+            searchExpanded = false;
             searchBarExpanded.setVisibility(View.GONE);
             hideSearchHistory();
         }
@@ -403,6 +440,10 @@ public class MainActivity extends AppCompatActivity {
         }
         if (which == SEC_SETTINGS) {
             settingsPanel.refresh();
+            return;
+        }
+        if (which == SEC_DOWNLOAD) {
+            downloadAdapter.submit(downloadManager.tasks());
             return;
         }
         if (which == SEC_HOME && webMode) {
@@ -458,12 +499,16 @@ public class MainActivity extends AppCompatActivity {
         int title;
         switch (which) {
             case SEC_HISTORY:
-                icon = R.drawable.ic_history;
+                icon = R.drawable.ic_history_solid;
                 title = R.string.history_chip;
                 break;
             case SEC_FAV:
-                icon = R.drawable.ic_star_border;
+                icon = R.drawable.ic_favorite;
                 title = R.string.tab_fav;
+                break;
+            case SEC_DOWNLOAD:
+                icon = R.drawable.ic_download;
+                title = R.string.tab_download;
                 break;
             case SEC_PROFILE:
                 icon = R.drawable.ic_person;
@@ -499,6 +544,7 @@ public class MainActivity extends AppCompatActivity {
         setRowSelected(navHome, which == SEC_HOME);
         setRowSelected(navHistory, which == SEC_HISTORY);
         setRowSelected(navFav, which == SEC_FAV);
+        setRowSelected(navDownload, which == SEC_DOWNLOAD);
         setRowSelected(navProfile, which == SEC_PROFILE);
         setRowSelected(navSettings, which == SEC_SETTINGS);
     }
@@ -586,6 +632,7 @@ public class MainActivity extends AppCompatActivity {
             hideKeyboard();
             searchInput.clearFocus();
             emptyView.setVisibility(View.GONE);
+            homeMark.setVisibility(View.GONE);
             loading.setVisibility(View.VISIBLE);
             list.setVisibility(View.VISIBLE);
         }
@@ -959,6 +1006,23 @@ public class MainActivity extends AppCompatActivity {
             noMore = false;
         }
         showSection(section);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (downloadManager != null) {
+            downloadManager.addListener(downloadListener);
+            downloadAdapter.submit(downloadManager.tasks());
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        if (downloadManager != null) {
+            downloadManager.removeListener(downloadListener);
+        }
+        super.onStop();
     }
 
     @Override

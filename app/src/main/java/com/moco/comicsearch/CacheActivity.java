@@ -71,8 +71,20 @@ public class CacheActivity extends SwipeBackActivity {
                         Toast.LENGTH_SHORT).show();
                 load();
             }
+
+            @Override
+            public void onDownload(Models.Album album) {
+                DownloadManager dm = DownloadManager.get(CacheActivity.this);
+                String chapterId = album.readId == null || album.readId.isEmpty()
+                        ? album.id : album.readId;
+                dm.enqueue(album, chapterId);
+                dm.start(album.id);
+                Toast.makeText(CacheActivity.this, R.string.download_start,
+                        Toast.LENGTH_SHORT).show();
+            }
         });
         adapter.setShowTrash(true);
+        adapter.setShowDownload(true);
         list.setAdapter(adapter);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());

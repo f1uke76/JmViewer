@@ -88,6 +88,16 @@
                 android:layout_height="match_parent"
                 android:visibility="gone" />
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/downloadList"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/bg"
+                android:visibility="gone"
+                android:clipToPadding="false"
+                android:paddingBottom="16dp"
+                android:scrollbars="none" />
+
             <LinearLayout
                 android:id="@+id/emptyView"
                 android:layout_width="match_parent"
@@ -397,7 +407,7 @@
             <ImageView
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:src="@drawable/ic_history"
+                android:src="@drawable/ic_history_solid"
                 android:contentDescription="@null" />
 
             <TextView
@@ -424,7 +434,7 @@
             <ImageView
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:src="@drawable/ic_star_border"
+                android:src="@drawable/ic_favorite"
                 android:contentDescription="@null" />
 
             <TextView
@@ -434,6 +444,33 @@
                 android:layout_weight="1"
                 android:layout_marginStart="16dp"
                 android:text="@string/tab_fav" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navDownload"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_download"
+                android:contentDescription="@null" />
+
+            <TextView
+                style="@style/DrawerLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="@string/tab_download" />
         </LinearLayout>
 
         <LinearLayout

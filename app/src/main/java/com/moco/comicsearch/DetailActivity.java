@@ -97,6 +97,22 @@ public class DetailActivity extends SwipeBackActivity {
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 
         barTitle.setText(fallbackTitle == null ? getString(R.string.detail) : fallbackTitle);
+
+        // 有缓存先用缓存秒开，再后台刷新
+        Models.Album cached = store.getCachedAlbum(albumId);
+        if (cached != null) {
+            album = cached;
+            if (!cached.title.isEmpty()) {
+                barTitle.setText(cached.title);
+            }
+            adapter.setAlbum(cached, store.isFavorite(cached.id));
+            Models.ChapterContent cachedContent = store.getCachedChapter(currentChapterId());
+            if (cachedContent != null) {
+                content = cachedContent;
+                adapter.setPages(cachedContent);
+            }
+        }
+
         loadDetail();
     }
 
@@ -112,6 +128,7 @@ public class DetailActivity extends SwipeBackActivity {
                 if (a.cover.isEmpty()) {
                     a.cover = fallbackCover == null ? "" : fallbackCover;
                 }
+                store.saveAlbum(a);
                 runOnUiThread(() -> {
                     album = a;
                     barTitle.setText(a.title.isEmpty() ? getString(R.string.detail) : a.title);
@@ -134,6 +151,12 @@ public class DetailActivity extends SwipeBackActivity {
         if (chapterId.isEmpty()) {
             return;
         }
+        // 先展示缓存的章节图片列表，再后台刷新
+        Models.ChapterContent cached = store.getCachedChapter(chapterId);
+        if (cached != null) {
+            content = cached;
+            adapter.setPages(cached);
+        }
         pool.execute(() -> {
             Models.ChapterContent c = null;
             try {
@@ -142,6 +165,7 @@ public class DetailActivity extends SwipeBackActivity {
                 if (c.aid.isEmpty()) {
                     c.aid = chapterId;
                 }
+                store.saveChapter(chapterId, c);
             } catch (Exception ignored) {
             }
             final Models.ChapterContent result = c;

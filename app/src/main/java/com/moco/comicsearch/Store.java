@@ -278,4 +278,150 @@ public class Store {
         }
         sp.edit().putString(key, arr.toString()).apply();
     }
+
+    // ------------------------------------------------------------ 详情缓存
+
+    private static final String KEY_ALBUM_CACHE = "album_cache";
+    private static final String KEY_CHAPTER_CACHE = "chapter_cache";
+
+    public Models.Album getCachedAlbum(String id) {
+        if (id == null || id.isEmpty()) {
+            return null;
+        }
+        try {
+            JSONObject root = new JSONObject(sp.getString(KEY_ALBUM_CACHE, "{}"));
+            JSONObject o = root.optJSONObject(id);
+            return o == null ? null : albumFromJson(o);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void saveAlbum(Models.Album a) {
+        if (a == null || a.id == null || a.id.isEmpty()) {
+            return;
+        }
+        try {
+            JSONObject root = new JSONObject(sp.getString(KEY_ALBUM_CACHE, "{}"));
+            root.put(a.id, albumToJson(a));
+            sp.edit().putString(KEY_ALBUM_CACHE, root.toString()).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static JSONObject albumToJson(Models.Album a) throws Exception {
+        JSONObject o = new JSONObject();
+        o.put("id", a.id);
+        o.put("title", a.title);
+        o.put("cover", a.cover);
+        o.put("author", a.author);
+        o.put("category", a.category);
+        o.put("sub", a.sub);
+        o.put("likes", a.likes);
+        o.put("pages", a.pages);
+        o.put("description", a.description);
+        o.put("readId", a.readId);
+        JSONArray tags = new JSONArray();
+        for (String t : a.tags) {
+            tags.put(t);
+        }
+        o.put("tags", tags);
+        JSONArray chs = new JSONArray();
+        for (Models.Chapter c : a.chapters) {
+            JSONObject co = new JSONObject();
+            co.put("id", c.id);
+            co.put("name", c.name);
+            chs.put(co);
+        }
+        o.put("chapters", chs);
+        return o;
+    }
+
+    private static Models.Album albumFromJson(JSONObject o) {
+        Models.Album a = new Models.Album();
+        a.id = o.optString("id");
+        a.title = o.optString("title");
+        a.cover = o.optString("cover");
+        a.author = o.optString("author");
+        a.category = o.optString("category");
+        a.sub = o.optString("sub");
+        a.likes = o.optString("likes");
+        a.pages = o.optString("pages");
+        a.description = o.optString("description");
+        a.readId = o.optString("readId");
+        JSONArray tags = o.optJSONArray("tags");
+        if (tags != null) {
+            for (int i = 0; i < tags.length(); i++) {
+                a.tags.add(tags.optString(i));
+            }
+        }
+        JSONArray chs = o.optJSONArray("chapters");
+        if (chs != null) {
+            for (int i = 0; i < chs.length(); i++) {
+                JSONObject co = chs.optJSONObject(i);
+                if (co == null) {
+                    continue;
+                }
+                Models.Chapter c = new Models.Chapter();
+                c.id = co.optString("id");
+                c.name = co.optString("name");
+                if (!c.id.isEmpty()) {
+                    a.chapters.add(c);
+                }
+            }
+        }
+        return a;
+    }
+
+    public Models.ChapterContent getCachedChapter(String chapterId) {
+        if (chapterId == null || chapterId.isEmpty()) {
+            return null;
+        }
+        try {
+            JSONObject root = new JSONObject(sp.getString(KEY_CHAPTER_CACHE, "{}"));
+            JSONObject o = root.optJSONObject(chapterId);
+            if (o == null) {
+                return null;
+            }
+            Models.ChapterContent c = new Models.ChapterContent();
+            c.aid = o.optString("aid");
+            c.scrambleId = o.optInt("scrambleId");
+            JSONArray pages = o.optJSONArray("pages");
+            if (pages != null) {
+                for (int i = 0; i < pages.length(); i++) {
+                    JSONObject po = pages.optJSONObject(i);
+                    if (po == null) {
+                        continue;
+                    }
+                    c.pages.add(new Models.PageImage(po.optString("url"), po.optString("name")));
+                }
+            }
+            return c.pages.isEmpty() ? null : c;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void saveChapter(String chapterId, Models.ChapterContent c) {
+        if (chapterId == null || chapterId.isEmpty() || c == null || c.pages.isEmpty()) {
+            return;
+        }
+        try {
+            JSONObject root = new JSONObject(sp.getString(KEY_CHAPTER_CACHE, "{}"));
+            JSONObject o = new JSONObject();
+            o.put("aid", c.aid);
+            o.put("scrambleId", c.scrambleId);
+            JSONArray pages = new JSONArray();
+            for (Models.PageImage p : c.pages) {
+                JSONObject po = new JSONObject();
+                po.put("url", p.url);
+                po.put("name", p.name);
+                pages.put(po);
+            }
+            o.put("pages", pages);
+            root.put(chapterId, o);
+            sp.edit().putString(KEY_CHAPTER_CACHE, root.toString()).apply();
+        } catch (Exception ignored) {
+        }
+    }
 }
