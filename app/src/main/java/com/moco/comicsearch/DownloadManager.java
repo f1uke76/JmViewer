@@ -83,12 +83,20 @@ public class DownloadManager {
         listeners.remove(l);
     }
 
+    private boolean notifyScheduled;
+
     private void notifyChanged() {
-        main.post(() -> {
+        // 合并高频进度回调，避免每次翻页都整表刷新
+        if (notifyScheduled) {
+            return;
+        }
+        notifyScheduled = true;
+        main.postDelayed(() -> {
+            notifyScheduled = false;
             for (Listener l : listeners) {
                 l.onChanged();
             }
-        });
+        }, 350);
     }
 
     public List<Task> tasks() {

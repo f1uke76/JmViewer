@@ -93,11 +93,11 @@
 
                 <ImageView
                     android:id="@+id/btnDownload"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_marginStart="6dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="8dp"
                     android:layout_gravity="center_vertical"
-                    android:padding="6dp"
+                    android:padding="8dp"
                     android:src="@drawable/ic_download"
                     android:contentDescription="@string/download"
                     android:clickable="true"

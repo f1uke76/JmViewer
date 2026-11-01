@@ -86,11 +86,41 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     }
 
     public void submit(List<Models.Album> list) {
-        items.clear();
-        if (list != null) {
-            items.addAll(list);
+        List<Models.Album> next = list == null ? new ArrayList<>() : new ArrayList<>(list);
+        // 同一批数据只做原地更新，避免下载进度刷新时整表重绑导致点击丢失
+        if (items.size() == next.size()) {
+            boolean sameIds = true;
+            for (int i = 0; i < items.size(); i++) {
+                if (!items.get(i).id.equals(next.get(i).id)) {
+                    sameIds = false;
+                    break;
+                }
+            }
+            if (sameIds) {
+                for (int i = 0; i < items.size(); i++) {
+                    Models.Album old = items.get(i);
+                    Models.Album nw = next.get(i);
+                    if (changed(old, nw)) {
+                        items.set(i, nw);
+                        notifyItemChanged(i);
+                    }
+                }
+                return;
+            }
         }
+        items.clear();
+        items.addAll(next);
         notifyDataSetChanged();
+    }
+
+    private static boolean changed(Models.Album a, Models.Album b) {
+        return a.progress != b.progress
+                || a.downloadState != b.downloadState
+                || !a.title.equals(b.title)
+                || !a.cover.equals(b.cover)
+                || !a.pages.equals(b.pages)
+                || !a.extra.equals(b.extra)
+                || !a.tags.equals(b.tags);
     }
 
     public void append(List<Models.Album> list) {

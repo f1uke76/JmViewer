@@ -114,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean noMore = false;
     private boolean requesting = false;
     private final List<Models.Album> searchResults = new ArrayList<>();
+    private final java.util.Map<String, Models.Album> dlMeta = new java.util.HashMap<>();
     private final List<Models.Album> homeAlbums = new ArrayList<>();
     private boolean homeLoading = false;
     private boolean homeLoaded = false;
@@ -145,7 +146,8 @@ public class MainActivity extends AppCompatActivity {
         setupDrawer();
 
         int start = savedInstanceState == null
-                ? SEC_HOME : savedInstanceState.getInt("section", SEC_HOME);
+                ? getIntent().getIntExtra("section", SEC_HOME)
+                : savedInstanceState.getInt("section", SEC_HOME);
         showSection(start);
         maybeCheckUpdate();
     }
@@ -841,12 +843,17 @@ public class MainActivity extends AppCompatActivity {
             a.downloadState = t.state;
             a.extra = t.state == 3 ? "" : (t.done + "/" + (t.total > 0 ? t.total : "?"));
             if (t.state == 3) {
-                // 下载完成后恢复成和收藏页一致的标签展示
-                Models.Album cached = store.getCachedAlbum(t.albumId);
-                if (cached != null) {
-                    a.pages = cached.pages;
-                    a.tags.addAll(cached.tags);
+                // 下载完成后恢复成和收藏页一致的标签展示（元信息缓存到内存，避免每帧读盘）
+                Models.Album cached = dlMeta.get(t.albumId);
+                if (cached == null) {
+                    cached = store.getCachedAlbum(t.albumId);
+                    if (cached == null) {
+                        cached = new Models.Album();
+                    }
+                    dlMeta.put(t.albumId, cached);
                 }
+                a.pages = cached.pages;
+                a.tags.addAll(cached.tags);
             }
             out.add(a);
         }
