@@ -936,7 +936,9 @@ public class MainActivity extends AppCompatActivity {
     /** 未全选时全选，已全选时全不选（退出多选）。 */
     private void toggleSelectAll() {
         if (allSelected()) {
-            exitSelection();
+            // 全不选：只清空勾选，保留多选状态，方便继续手动选择或再次全选
+            selectedIds.clear();
+            applySelectionUi();
         } else {
             selectAll();
         }
@@ -1030,11 +1032,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             selectedIds.add(album.id);
         }
-        if (selectedIds.isEmpty()) {
-            exitSelection();
-        } else {
-            applySelectionUi();
-        }
+        applySelectionUi();
     }
 
     private void exitSelection() {
@@ -1155,8 +1153,11 @@ public class MainActivity extends AppCompatActivity {
         for (String id : new ArrayList<>(selectedIds)) {
             downloadManager.start(id);
         }
-        exitSelection();
-        showSection(section);
+        // 保持多选状态，仅刷新列表
+        if (section == SEC_DOWNLOAD) {
+            adapter.submit(downloadAlbums());
+        }
+        applySelectionUi();
     }
 
     private void pauseSelected() {
@@ -1166,8 +1167,11 @@ public class MainActivity extends AppCompatActivity {
         for (String id : new ArrayList<>(selectedIds)) {
             downloadManager.pause(id);
         }
-        exitSelection();
-        showSection(section);
+        // 保持多选状态，仅刷新列表
+        if (section == SEC_DOWNLOAD) {
+            adapter.submit(downloadAlbums());
+        }
+        applySelectionUi();
     }
 
     private String timeAgo(long time) {
@@ -1640,6 +1644,10 @@ public class MainActivity extends AppCompatActivity {
         }
         if (searchExpanded) {
             collapseSearch();
+            return;
+        }
+        if (selectionMode) {
+            exitSelection();
             return;
         }
         if (isSearchMode()) {
