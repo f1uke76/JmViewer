@@ -3,6 +3,7 @@ package com.moco.comicsearch;
 import android.annotation.SuppressLint;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -71,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
     private ImageView btnHeader;
     private TextView headerTitle;
+    private HamburgerDrawable headerMorph;
     private ImageView searchFab;
     private View selectionBar;
     private View btnSelStart, btnSelPause, btnSelDelete;
@@ -154,6 +156,9 @@ public class MainActivity extends AppCompatActivity {
 
         btnHeader = findViewById(R.id.btnHeader);
         headerTitle = findViewById(R.id.headerTitle);
+        headerMorph = new HamburgerDrawable(
+                ContextCompat.getColor(this, R.color.on_surface), 2f,
+                getResources().getDisplayMetrics().density);
         searchFab = findViewById(R.id.searchFab);
         selectionBar = findViewById(R.id.selectionBar);
         btnSelStart = findViewById(R.id.btnSelStart);
@@ -178,6 +183,9 @@ public class MainActivity extends AppCompatActivity {
         btnHeader.setOnClickListener(v -> {
             if (selectionMode) {
                 exitSelection();
+            } else if (isSearchMode()) {
+                // 搜索结果态：左侧是叉，点击退出搜索、回到主页
+                exitSearch();
             } else {
                 drawer.openDrawer(GravityCompat.START);
             }
@@ -665,15 +673,50 @@ public class MainActivity extends AppCompatActivity {
                 title = getString(R.string.settings_title);
                 break;
             default:
-                icon = R.drawable.ic_menu;
+                icon = 0;
                 title = keyword.isEmpty()
                         ? getString(R.string.home_title)
                         : getString(R.string.search_title, keyword);
                 break;
         }
-        btnHeader.setImageResource(icon);
-        btnHeader.setColorFilter(ContextCompat.getColor(this, R.color.on_surface));
+        int color = ContextCompat.getColor(this, R.color.on_surface);
+        if (icon == 0) {
+            // 主页：三横 ↔ 叉 的可动画图标
+            btnHeader.setImageDrawable(headerMorph);
+            btnHeader.setColorFilter(color);
+            animateHeaderMorph(!keyword.isEmpty());
+        } else {
+            btnHeader.setImageResource(icon);
+            btnHeader.setColorFilter(color);
+        }
         headerTitle.setText(title);
+    }
+
+    private boolean isSearchMode() {
+        return section == SEC_HOME && !keyword.isEmpty();
+    }
+
+    /** 退出搜索结果，回到主页推荐 / 空白主页。 */
+    private void exitSearch() {
+        keyword = "";
+        searchResults.clear();
+        page = 1;
+        noMore = false;
+        showSection(SEC_HOME);
+    }
+
+    private void animateHeaderMorph(boolean searching) {
+        float to = searching ? 1f : 0f;
+        float from = headerMorph.getProgress();
+        if (Math.abs(from - to) < 0.01f) {
+            headerMorph.setProgress(to);
+            return;
+        }
+        ValueAnimator animator = ValueAnimator.ofFloat(from, to);
+        animator.setDuration(220);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.addUpdateListener(a -> headerMorph.setProgress((Float) a.getAnimatedValue()));
+        animator.start();
     }
 
     private void showProfile() {
@@ -1385,6 +1428,10 @@ public class MainActivity extends AppCompatActivity {
         }
         if (searchExpanded) {
             collapseSearch();
+            return;
+        }
+        if (isSearchMode()) {
+            exitSearch();
             return;
         }
         if (section != SEC_HOME) {
