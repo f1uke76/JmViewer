@@ -40,7 +40,10 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -137,7 +140,16 @@ public class MainActivity extends AppCompatActivity {
         IconSwitcher.apply(this);
         setContentView(R.layout.activity_main);
         EdgeToEdge.padTop(findViewById(R.id.header));
-        EdgeToEdge.padBottom(findViewById(R.id.contentFrame));
+        // 底部同时避开导航栏与输入法：键盘弹出时搜索框跟着上移
+        final View contentFrame = findViewById(R.id.contentFrame);
+        ViewCompat.setOnApplyWindowInsetsListener(contentFrame, (v, insets) -> {
+            Insets sb = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(),
+                    Math.max(sb.bottom, ime.bottom));
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(contentFrame);
         EdgeToEdge.padVertical(findViewById(R.id.drawerContent));
 
         site = Site.get(this);
