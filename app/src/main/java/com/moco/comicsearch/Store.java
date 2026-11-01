@@ -297,8 +297,31 @@ public class Store {
         }
     }
 
-    public void saveAlbum(Models.Album a) {
-        if (a == null || a.id == null || a.id.isEmpty()) {
+    /** 从本地收藏 / 历史里兜底找作品，保证无网也能进详情。 */
+    public Models.Album findLocalAlbum(String id) {
+        if (id == null || id.isEmpty()) {
+            return null;
+        }
+        for (Models.Album a : favorites()) {
+            if (id.equals(a.id)) {
+                return a;
+            }
+        }
+        for (Models.History h : history()) {
+            if (id.equals(h.id)) {
+                Models.Album a = new Models.Album();
+                a.id = h.id;
+                a.title = h.title;
+                a.cover = h.cover;
+                a.readId = h.readId;
+                a.chapters.addAll(h.chapters);
+                return a;
+            }
+        }
+        return null;
+    }
+
+    public void saveAlbum(Models.Album a) {        if (a == null || a.id == null || a.id.isEmpty()) {
             return;
         }
         try {

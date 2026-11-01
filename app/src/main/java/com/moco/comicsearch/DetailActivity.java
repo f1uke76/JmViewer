@@ -79,6 +79,18 @@ public class DetailActivity extends SwipeBackActivity {
             }
 
             @Override
+            public void onDownload() {
+                if (album == null) {
+                    return;
+                }
+                DownloadManager dm = DownloadManager.get(DetailActivity.this);
+                dm.enqueue(album, currentChapterId());
+                dm.start(album.id);
+                Toast.makeText(DetailActivity.this, R.string.download_start,
+                        Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
             public void onPageClick(int index) {
                 openReader(index);
             }
@@ -98,8 +110,11 @@ public class DetailActivity extends SwipeBackActivity {
 
         barTitle.setText(fallbackTitle == null ? getString(R.string.detail) : fallbackTitle);
 
-        // 有缓存先用缓存秒开，再后台刷新
+        // 有缓存先用缓存秒开，再后台刷新；无缓存时从本地收藏/历史兜底
         Models.Album cached = store.getCachedAlbum(albumId);
+        if (cached == null) {
+            cached = store.findLocalAlbum(albumId);
+        }
         if (cached != null) {
             album = cached;
             if (!cached.title.isEmpty()) {
@@ -110,6 +125,7 @@ public class DetailActivity extends SwipeBackActivity {
             if (cachedContent != null) {
                 content = cachedContent;
                 adapter.setPages(cachedContent);
+                loadPages();
             }
         }
 
@@ -133,11 +149,16 @@ public class DetailActivity extends SwipeBackActivity {
                     album = a;
                     barTitle.setText(a.title.isEmpty() ? getString(R.string.detail) : a.title);
                     adapter.setAlbum(a, store.isFavorite(a.id));
-                    loadPages();
+                    if (content == null) {
+                        loadPages();
+                    }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, R.string.load_failed,
-                        Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> {
+                    if (album == null) {
+                        Toast.makeText(this, R.string.load_failed, Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }

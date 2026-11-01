@@ -30,6 +30,8 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
         void onRead();
 
+        void onDownload();
+
         void onPageClick(int index);
     }
 
@@ -133,10 +135,14 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             });
         }
 
-        h.btnFav.setText(fav ? R.string.favorited : R.string.favorite);
+        h.btnFav.setColorFilter(fav
+                ? ThemeManager.primary(h.itemView.getContext())
+                : androidx.core.content.ContextCompat.getColor(
+                        h.itemView.getContext(), R.color.muted));
         h.btnCopy.setOnClickListener(v -> listener.onCopy());
         h.btnFav.setOnClickListener(v -> listener.onFavorite());
         h.btnRead.setOnClickListener(v -> listener.onRead());
+        h.btnDownload.setOnClickListener(v -> listener.onDownload());
     }
 
     private void bindPage(PageVH h, int index) {
@@ -208,8 +214,9 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         TextView meta;
         LinearLayout tags;
         ImageView btnCopy;
-        MaterialButton btnFav;
-        MaterialButton btnRead;
+        ImageView btnFav;
+        ImageView btnRead;
+        ImageView btnDownload;
 
         HeaderVH(View v) {
             super(v);
@@ -221,6 +228,7 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             btnCopy = v.findViewById(R.id.btnCopy);
             btnFav = v.findViewById(R.id.btnFav);
             btnRead = v.findViewById(R.id.btnRead);
+            btnDownload = v.findViewById(R.id.btnDownload);
         }
     }
 

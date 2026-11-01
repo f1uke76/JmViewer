@@ -111,6 +111,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ThemeManager.apply(this);
+        IconSwitcher.apply(this);
         setContentView(R.layout.activity_main);
 
         site = Site.get(this);
@@ -578,6 +579,11 @@ public class MainActivity extends AppCompatActivity {
             a.cover = h.cover;
             a.readId = h.readId;
             a.extra = timeAgo(h.time);
+            Models.Album cached = store.getCachedAlbum(h.id);
+            if (cached != null) {
+                a.pages = cached.pages;
+                a.tags.addAll(cached.tags);
+            }
             out.add(a);
         }
         return out;

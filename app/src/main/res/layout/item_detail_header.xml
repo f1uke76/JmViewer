@@ -81,7 +81,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- 收藏 / 阅读：两键并排，直角 -->
+    <!-- 收藏 / 阅读 / 下载：三个等宽图标按钮 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -90,22 +90,52 @@
         android:layout_marginTop="16dp"
         android:orientation="horizontal">
 
-        <com.google.android.material.button.MaterialButton
+        <ImageView
             android:id="@+id/btnFav"
-            style="@style/Widget.ComicSearch.Button.Tonal"
             android:layout_width="0dp"
             android:layout_height="46dp"
             android:layout_weight="1"
-            android:text="@string/favorite" />
+            android:padding="12dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_favorite"
+            android:tint="?attr/colorPrimary"
+            android:background="@drawable/bg_block"
+            android:foreground="?attr/selectableItemBackground"
+            android:contentDescription="@string/favorite"
+            android:clickable="true"
+            android:focusable="true" />
 
-        <com.google.android.material.button.MaterialButton
+        <ImageView
             android:id="@+id/btnRead"
-            style="@style/Widget.ComicSearch.Button"
             android:layout_width="0dp"
             android:layout_height="46dp"
             android:layout_weight="1"
             android:layout_marginStart="10dp"
-            android:text="@string/start_reading" />
+            android:padding="12dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_read"
+            android:tint="@color/white"
+            android:background="@drawable/bg_block_primary"
+            android:foreground="?attr/selectableItemBackground"
+            android:contentDescription="@string/start_reading"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <ImageView
+            android:id="@+id/btnDownload"
+            android:layout_width="0dp"
+            android:layout_height="46dp"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:padding="12dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_download"
+            android:tint="?attr/colorPrimary"
+            android:background="@drawable/bg_block"
+            android:foreground="?attr/selectableItemBackground"
+            android:contentDescription="@string/download"
+            android:clickable="true"
+            android:focusable="true" />
     </LinearLayout>
 
     <!-- 标签栏 -->

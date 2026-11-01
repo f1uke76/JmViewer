@@ -273,6 +273,16 @@ public class ReaderActivity extends SwipeBackActivity {
             return;
         }
 
+        // 有章节缓存先用缓存离线阅读，再后台刷新
+        Models.ChapterContent cached = store.getCachedChapter(chapterId);
+        if (cached != null) {
+            content = cached;
+            adapter.setData(cached);
+            loading.setVisibility(View.GONE);
+            applyStartPage();
+            updateCounter();
+        }
+
         pool.execute(() -> {
             Models.ChapterContent c = null;
             String error = null;
@@ -294,6 +304,7 @@ public class ReaderActivity extends SwipeBackActivity {
                             Toast.LENGTH_SHORT).show();
                     return;
                 }
+                store.saveChapter(chapterId, result);
                 content = result;
                 adapter.setData(result);
                 applyStartPage();

@@ -7,9 +7,9 @@
     <application
         android:name=".App"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher_jm"
+        android:icon="@mipmap/ic_jm_blue"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_jm_round"
+        android:roundIcon="@mipmap/ic_jm_blue"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true"
@@ -22,12 +22,112 @@
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:windowSoftInputMode="adjustResize|stateAlwaysHidden" />
 
-        <!-- 桌面图标：通过切换 activity-alias 实现换图标 -->
+        <!-- 桌面图标：衬线 Jm，按主题色预生成多套，运行时只启用匹配的一个 -->
         <activity-alias
-            android:name=".IconPurple"
+            android:name=".JmBlue"
             android:targetActivity=".MainActivity"
             android:enabled="true"
             android:exported="true"
+            android:icon="@mipmap/ic_jm_blue"
+            android:roundIcon="@mipmap/ic_jm_blue"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".JmGreen"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_jm_green"
+            android:roundIcon="@mipmap/ic_jm_green"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".JmOlive"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_jm_olive"
+            android:roundIcon="@mipmap/ic_jm_olive"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".JmOrange"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_jm_orange"
+            android:roundIcon="@mipmap/ic_jm_orange"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".JmRed"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_jm_red"
+            android:roundIcon="@mipmap/ic_jm_red"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".JmPurple"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_jm_purple"
+            android:roundIcon="@mipmap/ic_jm_purple"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".JmTeal"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_jm_teal"
+            android:roundIcon="@mipmap/ic_jm_teal"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".JmPink"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_jm_pink"
+            android:roundIcon="@mipmap/ic_jm_pink"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

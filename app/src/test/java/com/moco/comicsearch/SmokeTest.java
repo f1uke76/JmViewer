@@ -201,6 +201,10 @@ public class SmokeTest {
                     }
 
                     @Override
+                    public void onDownload() {
+                    }
+
+                    @Override
                     public void onPageClick(int index) {
                     }
                 });
@@ -218,6 +222,7 @@ public class SmokeTest {
 
         assertNotNull(h.itemView.findViewById(R.id.btnFav));
         assertNotNull(h.itemView.findViewById(R.id.btnRead));
+        assertNotNull(h.itemView.findViewById(R.id.btnDownload));
         assertNotNull("缺少复制按钮", h.itemView.findViewById(R.id.btnCopy));
         assertEquals("详情标题",
                 ((TextView) h.itemView.findViewById(R.id.title)).getText().toString());
