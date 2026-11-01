@@ -242,18 +242,35 @@ public class DetailActivity extends SwipeBackActivity {
         }
         final String name = album.title == null ? "" : album.title;
         final String code = album.id == null ? "" : album.id;
+        final String link = site.base() + "/album/" + code + "/";
         new MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.copy_title)
-                .setItems(new String[]{getString(R.string.copy_name), getString(R.string.copy_code)},
-                        (d, which) -> {
-                            if (which == 0) {
-                                copyToClip(name, getString(R.string.title_copied));
-                            } else {
-                                copyToClip(code, getString(R.string.code_copied));
-                            }
-                        })
+                .setTitle(R.string.share)
+                .setItems(new String[]{
+                        getString(R.string.copy_name),
+                        getString(R.string.copy_code),
+                        getString(R.string.copy_link),
+                        getString(R.string.open_in_browser)
+                }, (d, which) -> {
+                    if (which == 0) {
+                        copyToClip(name, getString(R.string.title_copied));
+                    } else if (which == 1) {
+                        copyToClip(code, getString(R.string.code_copied));
+                    } else if (which == 2) {
+                        copyToClip(link, getString(R.string.link_copied));
+                    } else {
+                        openInBrowser(link);
+                    }
+                })
                 .setNegativeButton(R.string.cancel, null)
                 .show();
+    }
+
+    private void openInBrowser(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)));
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.browser_open_failed, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void copyToClip(String text, String toast) {

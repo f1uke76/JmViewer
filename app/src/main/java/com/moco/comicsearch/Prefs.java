@@ -14,7 +14,7 @@ import java.util.List;
  */
 public class Prefs {
 
-    public static final String DEFAULT_BASE_URL = "https://comic18j-moco.work";
+    public static final String DEFAULT_BASE_URL = "https://18comic.vip";
 
     private static final String FILE = "comic_search_prefs";
     private static final String KEY_BASE = "base_url";

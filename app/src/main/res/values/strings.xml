@@ -160,7 +160,7 @@
 
     <!-- 0.3.1 -->
     <string name="copy_name">复制漫画名称</string>
-    <string name="copy_code">复制代号</string>
+    <string name="copy_code">复制漫画车牌</string>
     <string name="code_copied">代号已复制</string>
     <string name="clear_records">清除记录</string>
     <string name="clear_read_records">清除历史</string>
@@ -183,4 +183,10 @@
     <string name="accent_orange">橙</string>
     <string name="accent_teal">青</string>
     <string name="version_label">版本 %1$s</string>
+    <string name="copy_link">复制网页链接</string>
+    <string name="open_in_browser">使用浏览器打开</string>
+    <string name="share">分享</string>
+    <string name="link_copied">链接已复制</string>
+    <string name="browser_open_failed">没有可用的浏览器</string>
+    <string name="confirm_remove_download">确定删除「%1$s」的下载与缓存？</string>
 </resources>

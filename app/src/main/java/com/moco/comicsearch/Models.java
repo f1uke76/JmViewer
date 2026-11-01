@@ -17,7 +17,9 @@ public class Models {
         public String pages = "";
         public String description = "";
         public String readId = "";                  // /photo/{id} 里的 id
-        public String extra = "";                   // 附加说明（如缓存大小）
+        public String extra = "";
+        /** 下载进度 0-100；-1 表示不显示进度条。 */
+        public int progress = -1;                   // 附加说明（如缓存大小）
         public final List<String> tags = new ArrayList<>();
         public final List<Chapter> chapters = new ArrayList<>();
 

@@ -264,6 +264,20 @@ public class DownloadManager {
             t.total = content.pages.size();
             update(t);
 
+            // 把详情元信息与章节信息写入缓存，详情页 / 阅读器可离线命中
+            Store store = new Store(ctx);
+            Models.Album album = new Models.Album();
+            album.id = t.albumId;
+            album.title = t.title;
+            album.cover = t.cover;
+            album.readId = chapterId;
+            Models.Chapter ch = new Models.Chapter();
+            ch.id = chapterId;
+            ch.name = "开始阅读";
+            album.chapters.add(ch);
+            store.saveAlbum(album);
+            store.saveChapter(chapterId, content);
+
             File tmp = new File(ctx.getCacheDir(), "dl_" + t.albumId);
             //noinspection ResultOfMethodCallIgnored
             tmp.mkdirs();
@@ -278,6 +292,16 @@ public class DownloadManager {
                 File out = new File(tmp, String.format(Locale.ROOT, "%05d.jpg", i + 1));
                 if (!out.exists() || out.length() == 0) {
                     byte[] data = site.getBytes(p.url);
+                    // 同步写入图片缓存，详情页 / 阅读器可直接命中
+                    File rawDir = new File(ctx.getCacheDir(), "raw");
+                    //noinspection ResultOfMethodCallIgnored
+                    rawDir.mkdirs();
+                    File rawFile = new File(rawDir, content.aid + "_" + p.name);
+                    if (!rawFile.exists() || rawFile.length() == 0) {
+                        try (FileOutputStream fos = new FileOutputStream(rawFile)) {
+                            fos.write(data);
+                        }
+                    }
                     Bitmap bmp = Scramble.decode(data, content.aid, p.name, content.scrambleId);
                     if (bmp != null) {
                         try (FileOutputStream fos = new FileOutputStream(out)) {

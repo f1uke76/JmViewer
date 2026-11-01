@@ -88,16 +88,6 @@
                 android:layout_height="match_parent"
                 android:visibility="gone" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/downloadList"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@color/bg"
-                android:visibility="gone"
-                android:clipToPadding="false"
-                android:paddingBottom="16dp"
-                android:scrollbars="none" />
-
             <LinearLayout
                 android:id="@+id/emptyView"
                 android:layout_width="match_parent"

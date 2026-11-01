@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -42,6 +43,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     private boolean grid = false;
     private boolean showTrash = false;
     private boolean showDownload = false;
+    private boolean showProgress = false;
 
     public AlbumAdapter(ImageLoader loader, Listener listener) {
         this.loader = loader;
@@ -56,6 +58,11 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     /** 是否在每行右侧显示下载按钮。 */
     public void setShowDownload(boolean show) {
         this.showDownload = show;
+    }
+
+    /** 是否显示下载进度条（下载页）。 */
+    public void setShowProgress(boolean show) {
+        this.showProgress = show;
     }
 
     public void setGrid(boolean grid) {
@@ -185,11 +192,20 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             h.btnCopy.setOnClickListener(v -> listener.onCopy(a));
         }
         if (h.btnTrash != null) {
-            if (showTrash) {
+            boolean trash = showTrash && (!showProgress || a.progress < 0);
+            if (trash) {
                 h.btnTrash.setVisibility(View.VISIBLE);
                 h.btnTrash.setOnClickListener(v -> listener.onTrash(a));
             } else {
                 h.btnTrash.setVisibility(View.GONE);
+            }
+        }
+        if (h.downloadProgress != null) {
+            if (showProgress && a.progress >= 0) {
+                h.downloadProgress.setVisibility(View.VISIBLE);
+                h.downloadProgress.setProgress(a.progress);
+            } else {
+                h.downloadProgress.setVisibility(View.GONE);
             }
         }
         if (h.btnDownload != null) {
@@ -236,6 +252,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         ImageView btnCopy;
         ImageView btnTrash;
         ImageView btnDownload;
+        ProgressBar downloadProgress;
 
         VH(@NonNull View v) {
             super(v);
@@ -246,6 +263,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             btnCopy = v.findViewById(R.id.btnCopy);
             btnTrash = v.findViewById(R.id.btnTrash);
             btnDownload = v.findViewById(R.id.btnDownload);
+            downloadProgress = v.findViewById(R.id.downloadProgress);
         }
     }
 }

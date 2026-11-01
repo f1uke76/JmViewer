@@ -79,14 +79,8 @@ public class MainActivity extends AppCompatActivity {
     private SectionHeaderAdapter headerHist;
     private View settingsView;
     private SettingsPanel settingsPanel;
-    private RecyclerView downloadList;
-    private DownloadAdapter downloadAdapter;
     private DownloadManager downloadManager;
-    private final DownloadManager.Listener downloadListener = () -> {
-        if (downloadAdapter != null && downloadManager != null) {
-            downloadAdapter.submit(downloadManager.tasks());
-        }
-    };
+    private final DownloadManager.Listener downloadListener = this::onDownloadsChanged;
     private View loading;
     private TextView emptyTitle;
     private TextView emptyMsg;
@@ -155,7 +149,6 @@ public class MainActivity extends AppCompatActivity {
         homeMark = findViewById(R.id.homeMark);
         profileList = findViewById(R.id.profileView);
         settingsView = findViewById(R.id.settingsView);
-        downloadList = findViewById(R.id.downloadList);
         loading = findViewById(R.id.loading);
         emptyTitle = findViewById(R.id.emptyTitle);
         emptyMsg = findViewById(R.id.emptyMsg);
@@ -181,6 +174,11 @@ public class MainActivity extends AppCompatActivity {
         refresh.setColorSchemeColors(ThemeManager.primary(this));
         refresh.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.surface2));
         refresh.setOnRefreshListener(() -> {
+            if (section == SEC_DOWNLOAD) {
+                adapter.submit(downloadAlbums());
+                refresh.setRefreshing(false);
+                return;
+            }
             if (section != SEC_HOME) {
                 refresh.setRefreshing(false);
                 return;
@@ -366,10 +364,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupDownloads() {
         downloadManager = DownloadManager.get(this);
-        downloadList.setLayoutManager(new LinearLayoutManager(this));
-        downloadAdapter = new DownloadAdapter(loader, downloadManager);
-        downloadList.setAdapter(downloadAdapter);
-        downloadAdapter.submit(downloadManager.tasks());
     }
 
     private AlbumAdapter.Listener newAlbumListener() {
@@ -387,6 +381,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLongClick(Models.Album album) {
                 showItemMenu(album);
+            }
+
+            @Override
+            public void onTrash(Models.Album album) {
+                confirmRemoveDownload(album);
             }
         };
     }
@@ -411,13 +410,13 @@ public class MainActivity extends AppCompatActivity {
         }
         applyHeader(which);
 
-        boolean listSection = which == SEC_HOME || which == SEC_HISTORY || which == SEC_FAV;
+        boolean listSection = which == SEC_HOME || which == SEC_HISTORY || which == SEC_FAV
+                || which == SEC_DOWNLOAD;
         list.setVisibility(listSection ? View.VISIBLE : View.GONE);
-        refresh.setVisibility((which == SEC_PROFILE || which == SEC_SETTINGS || which == SEC_DOWNLOAD)
+        refresh.setVisibility((which == SEC_PROFILE || which == SEC_SETTINGS)
                 ? View.GONE : View.VISIBLE);
         profileList.setVisibility(which == SEC_PROFILE ? View.VISIBLE : View.GONE);
         settingsView.setVisibility(which == SEC_SETTINGS ? View.VISIBLE : View.GONE);
-        downloadList.setVisibility(which == SEC_DOWNLOAD ? View.VISIBLE : View.GONE);
 
         boolean showFab = which == SEC_HOME;
         searchFab.setVisibility(showFab && !searchExpanded ? View.VISIBLE : View.GONE);
@@ -444,9 +443,19 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (which == SEC_DOWNLOAD) {
-            downloadAdapter.submit(downloadManager.tasks());
+            adapter.setShowProgress(true);
+            adapter.setShowTrash(true);
+            adapter.setShowDownload(false);
+            adapter.setGrid(false);
+            if (!(list.getLayoutManager() instanceof LinearLayoutManager)) {
+                list.setLayoutManager(new LinearLayoutManager(this));
+            }
+            adapter.submit(downloadAlbums());
             return;
         }
+        adapter.setShowProgress(false);
+        adapter.setShowTrash(false);
+        adapter.setShowDownload(false);
         if (which == SEC_HOME && webMode) {
             String cur = webView.getUrl();
             if (cur == null || cur.isEmpty()) {
@@ -587,6 +596,43 @@ public class MainActivity extends AppCompatActivity {
             out.add(a);
         }
         return out;
+    }
+
+    private void onDownloadsChanged() {
+        if (section == SEC_DOWNLOAD && adapter != null && downloadManager != null) {
+            adapter.submit(downloadAlbums());
+        }
+    }
+
+    private List<Models.Album> downloadAlbums() {
+        List<Models.Album> out = new ArrayList<>();
+        if (downloadManager == null) {
+            return out;
+        }
+        for (DownloadManager.Task t : downloadManager.tasks()) {
+            Models.Album a = new Models.Album();
+            a.id = t.albumId;
+            a.title = t.title;
+            a.cover = t.cover;
+            a.readId = t.chapterId;
+            a.progress = t.state == 3 ? -1 : t.progress();
+            a.extra = t.state == 3 ? "" : (t.done + "/" + (t.total > 0 ? t.total : "?"));
+            out.add(a);
+        }
+        return out;
+    }
+
+    private void confirmRemoveDownload(Models.Album album) {
+        String name = album.title == null || album.title.isEmpty() ? album.id : album.title;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.remove)
+                .setMessage(getString(R.string.confirm_remove_download, name))
+                .setPositiveButton(R.string.remove, (d, w) -> {
+                    downloadManager.remove(album.id);
+                    adapter.submit(downloadAlbums());
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
     }
 
     private String timeAgo(long time) {
@@ -1019,7 +1065,6 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         if (downloadManager != null) {
             downloadManager.addListener(downloadListener);
-            downloadAdapter.submit(downloadManager.tasks());
         }
     }
 

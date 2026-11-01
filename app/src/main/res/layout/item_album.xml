@@ -53,13 +53,24 @@
             android:singleLine="true"
             android:ellipsize="end" />
 
-        <LinearLayout
-            android:id="@+id/tags"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:orientation="horizontal" />
-    </LinearLayout>
+            <LinearLayout
+                android:id="@+id/tags"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal" />
+
+            <ProgressBar
+                android:id="@+id/downloadProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="6dp"
+                android:max="100"
+                android:progressBackgroundTint="@color/divider"
+                android:progressTint="?attr/colorPrimary"
+                android:visibility="gone" />
+        </LinearLayout>
 
     <ImageView
         android:id="@+id/btnDownload"
