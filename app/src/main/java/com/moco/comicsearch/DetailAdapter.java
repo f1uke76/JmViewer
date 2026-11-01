@@ -100,13 +100,13 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
         StringBuilder meta = new StringBuilder();
         if (!a.pages.isEmpty()) {
-            meta.append(a.pages).append(" 页");
+            meta.append(a.pages).append('p');
         }
-        if (!a.likes.isEmpty()) {
+        if (!a.id.isEmpty()) {
             if (meta.length() > 0) {
                 meta.append(" · ");
             }
-            meta.append("♥ ").append(a.likes);
+            meta.append(a.id);
         }
         h.meta.setText(meta);
 

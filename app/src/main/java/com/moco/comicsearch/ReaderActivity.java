@@ -2,6 +2,7 @@ package com.moco.comicsearch;
 
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.view.MotionEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,7 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** 纯净阅读器：只显示漫画图片，可切换上下话、下载整话。 */
-public class ReaderActivity extends AppCompatActivity {
+public class ReaderActivity extends SwipeBackActivity {
 
     private Site site;
     private Store store;
@@ -38,6 +39,7 @@ public class ReaderActivity extends AppCompatActivity {
     private View loading;
     private TextView barTitle;
     private TextView counter;
+    private android.widget.SeekBar progressBar;
     private MaterialButton btnPrev;
     private MaterialButton btnNext;
 
@@ -51,6 +53,7 @@ public class ReaderActivity extends AppCompatActivity {
     private ArrayList<String> chapterNames = new ArrayList<>();
     private int chapterIndex = 0;
     private int localPages = 0;
+    private int startPage = 0;
     private Models.ChapterContent content;
 
     @Override
@@ -70,6 +73,7 @@ public class ReaderActivity extends AppCompatActivity {
         ArrayList<String> names = getIntent().getStringArrayListExtra("chapterNames");
         chapterIndex = getIntent().getIntExtra("index", 0);
         localPages = getIntent().getIntExtra("localPages", 0);
+        startPage = getIntent().getIntExtra("page", 0);
         if (ids != null) {
             chapterIds = ids;
         }
@@ -96,6 +100,23 @@ public class ReaderActivity extends AppCompatActivity {
         btnPrev = findViewById(R.id.btnPrevChapter);
         btnNext = findViewById(R.id.btnNextChapter);
         btnFav = findViewById(R.id.btnFav);
+        progressBar = findViewById(R.id.readerProgress);
+        progressBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar sb, int progress, boolean fromUser) {
+                if (fromUser) {
+                    pagesView.scrollToPosition(progress);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(android.widget.SeekBar sb) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(android.widget.SeekBar sb) {
+            }
+        });
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         btnPrev.setOnClickListener(v -> switchChapter(chapterIndex - 1));
@@ -245,6 +266,7 @@ public class ReaderActivity extends AppCompatActivity {
             content = local;
             adapter.setData(local);
             loading.setVisibility(View.GONE);
+            applyStartPage();
             updateCounter();
             recordHistory(chapterId);
             return;
@@ -273,6 +295,7 @@ public class ReaderActivity extends AppCompatActivity {
                 }
                 content = result;
                 adapter.setData(result);
+                applyStartPage();
                 updateCounter();
                 recordHistory(result.aid);
             });
@@ -301,6 +324,21 @@ public class ReaderActivity extends AppCompatActivity {
         store.addHistory(h);
     }
 
+    /** 从详情页预览图进入时，直接跳到对应页。 */
+    private void applyStartPage() {
+        if (startPage <= 0 || adapter.getItemCount() == 0) {
+            return;
+        }
+        int pos = Math.min(startPage, adapter.getItemCount() - 1);
+        RecyclerView.LayoutManager lm = pagesView.getLayoutManager();
+        if (lm instanceof LinearLayoutManager) {
+            ((LinearLayoutManager) lm).scrollToPositionWithOffset(pos, 0);
+        } else {
+            pagesView.scrollToPosition(pos);
+        }
+        startPage = 0;
+    }
+
     private void updateCounter() {
         if (adapter.getItemCount() == 0) {
             counter.setText("");
@@ -309,6 +347,12 @@ public class ReaderActivity extends AppCompatActivity {
         int first = ((LinearLayoutManager) pagesView.getLayoutManager())
                 .findFirstVisibleItemPosition();
         counter.setText(getString(R.string.page_of, Math.max(first + 1, 1), adapter.getItemCount()));
+        if (progressBar != null) {
+            progressBar.setMax(Math.max(adapter.getItemCount() - 1, 0));
+            if (!progressBar.isPressed()) {
+                progressBar.setProgress(Math.max(first, 0));
+            }
+        }
     }
 
     private void toggleBars() {
@@ -324,6 +368,20 @@ public class ReaderActivity extends AppCompatActivity {
             return;
         }
         super.onBackPressed();
+    }
+
+    /** 底部进度条 / 章节栏区域不触发整页返回手势，避免拖动进度条时误退出。 */
+    @Override
+    protected boolean shouldHandleSwipeBack(MotionEvent ev) {
+        if (bottomBar != null && bottomBar.getVisibility() == View.VISIBLE) {
+            int[] loc = new int[2];
+            bottomBar.getLocationOnScreen(loc);
+            float y = ev.getRawY();
+            if (y >= loc[1] && y <= loc[1] + bottomBar.getHeight()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override

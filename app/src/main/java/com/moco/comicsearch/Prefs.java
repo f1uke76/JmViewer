@@ -141,6 +141,16 @@ public class Prefs {
         sp.edit().remove(KEY_HISTORY).apply();
     }
 
+    // ------------------------------------------------------------ 导入 / 导出
+
+    public String rawSearchHistory() {
+        return sp.getString(KEY_HISTORY, "[]");
+    }
+
+    public void putRawSearchHistory(String raw) {
+        sp.edit().putString(KEY_HISTORY, raw == null || raw.isEmpty() ? "[]" : raw).apply();
+    }
+
     private void saveHistory(List<String> list) {
         JSONArray arr = new JSONArray();
         for (String s : list) {

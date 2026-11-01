@@ -13,9 +13,19 @@ import androidx.drawerlayout.widget.DrawerLayout;
  */
 public class SwipeDrawerLayout extends DrawerLayout {
 
+    /** 整页右滑回调：返回 true 表示手势已被消费（例如返回上一级）。 */
+    public interface OnSwipeRightListener {
+        boolean onSwipeRight();
+    }
+
     private float downX;
     private float downY;
     private boolean handled;
+    private OnSwipeRightListener listener;
+
+    public void setOnSwipeRightListener(OnSwipeRightListener l) {
+        listener = l;
+    }
 
     public SwipeDrawerLayout(Context context) {
         super(context);
@@ -38,13 +48,19 @@ public class SwipeDrawerLayout extends DrawerLayout {
                 handled = false;
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (!handled && !isDrawerOpen(GravityCompat.START)) {
+                if (!handled) {
                     float dx = ev.getX() - downX;
                     float dy = ev.getY() - downY;
                     if (dx > dp(30) && Math.abs(dx) > Math.abs(dy) * 1.4f) {
-                        handled = true;
-                        openDrawer(GravityCompat.START);
-                        return true;
+                        if (listener != null && listener.onSwipeRight()) {
+                            handled = true;
+                            return true;
+                        }
+                        if (!isDrawerOpen(GravityCompat.START)) {
+                            handled = true;
+                            openDrawer(GravityCompat.START);
+                            return true;
+                        }
                     }
                 }
                 break;

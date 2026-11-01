@@ -108,30 +108,16 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         h.title.setText(a.title);
 
         if (h.meta != null) {
+            // 统一小字：多少 P + 作品代号（1464578），可选附加信息
             StringBuilder meta = new StringBuilder();
-            if (!a.author.isEmpty()) {
-                meta.append(a.author);
-            }
-            if (!a.category.isEmpty()) {
-                if (meta.length() > 0) {
-                    meta.append(" · ");
-                }
-                meta.append(a.category);
-                if (!a.sub.isEmpty()) {
-                    meta.append(' ').append(a.sub);
-                }
-            }
             if (!a.pages.isEmpty()) {
-                if (meta.length() > 0) {
-                    meta.append(" · ");
-                }
-                meta.append(a.pages).append("P");
+                meta.append(a.pages).append('p');
             }
-            if (!a.likes.isEmpty()) {
+            if (!a.id.isEmpty()) {
                 if (meta.length() > 0) {
                     meta.append(" · ");
                 }
-                meta.append("♥ ").append(a.likes);
+                meta.append(a.id);
             }
             if (!a.extra.isEmpty()) {
                 if (meta.length() > 0) {

@@ -15,48 +15,35 @@
         android:focusableInTouchMode="true"
         android:fitsSystemWindows="true">
 
-        <!-- 顶部栏：☰ + 搜索框 / 标题 -->
+        <!-- 顶部栏：整块搜索框（☰ 在框内，放大镜在右） -->
         <LinearLayout
             android:id="@+id/topBar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingStart="4dp"
-            android:paddingEnd="10dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             android:background="@color/surface">
 
-            <ImageView
-                android:id="@+id/btnMenu"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:padding="11dp"
-                android:src="@drawable/ic_menu"
-                android:contentDescription="@string/menu"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackgroundBorderless" />
-
-            <!-- 主页搜索框：锐利直角 -->
             <LinearLayout
                 android:id="@+id/searchBar"
                 android:layout_width="0dp"
-                android:layout_height="42dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
-                android:layout_marginStart="2dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="@drawable/bg_block"
-                android:paddingStart="10dp"
+                android:paddingStart="2dp"
                 android:paddingEnd="2dp">
 
                 <ImageView
-                    android:id="@+id/btnSearchIcon"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:padding="5dp"
-                    android:src="@drawable/ic_search"
-                    android:contentDescription="@string/search"
+                    android:id="@+id/btnMenu"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_menu"
+                    android:contentDescription="@string/menu"
                     android:clickable="true"
                     android:focusable="true"
                     android:background="?attr/selectableItemBackgroundBorderless" />
@@ -66,7 +53,7 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="2dp"
                     android:background="@null"
                     android:hint="@string/hint_search"
                     android:textColor="@color/on_surface"
@@ -83,31 +70,52 @@
                     android:paddingBottom="0dp" />
 
                 <ImageView
-                    android:id="@+id/btnClear"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:padding="10dp"
-                    android:src="@drawable/ic_close"
-                    android:contentDescription="@string/cancel"
-                    android:visibility="gone"
+                    android:id="@+id/btnSearchAction"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_search"
+                    android:contentDescription="@string/search"
                     android:clickable="true"
                     android:focusable="true"
                     android:background="?attr/selectableItemBackgroundBorderless" />
             </LinearLayout>
 
-            <!-- 其他页标题 -->
-            <TextView
-                android:id="@+id/barTitle"
+            <LinearLayout
+                android:id="@+id/pageBar"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="44dp"
                 android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:textColor="@color/on_surface"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:singleLine="true"
-                android:ellipsize="end"
-                android:visibility="gone" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_block"
+                android:paddingStart="2dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/btnMenuPage"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_menu"
+                    android:contentDescription="@string/menu"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackgroundBorderless" />
+
+                <TextView
+                    android:id="@+id/barTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:textColor="@color/on_surface"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- 搜索历史：点击搜索框立即展开 -->
@@ -180,80 +188,16 @@
                     android:scrollbars="none" />
             </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-            <!-- 我的 -->
-            <ScrollView
+            <!-- 我的：上收藏、下历史 -->
+            <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/profileView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="@color/bg"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingTop="12dp"
-                        android:paddingBottom="20dp">
-
-                        <ImageView
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            android:background="@drawable/bg_cover"
-                            android:padding="12dp"
-                            android:src="@drawable/ic_person"
-                            android:contentDescription="@null" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="14dp"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/accountName"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/not_logged_in"
-                                android:textColor="@color/on_surface"
-                                android:textSize="17sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/accountHint"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="@string/login_hint_short"
-                                android:textColor="@color/muted"
-                                android:textSize="12sp" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAccount"
-                        style="@style/Widget.ComicSearch.Button.Tonal"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:text="@string/login" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="28dp"
-                        android:text="@string/about_text"
-                        android:textColor="@color/muted"
-                        android:textSize="12sp"
-                        android:lineSpacingExtra="4dp" />
-                </LinearLayout>
-            </ScrollView>
+                android:visibility="gone"
+                android:clipToPadding="false"
+                android:paddingBottom="8dp"
+                android:scrollbars="none" />
 
             <LinearLayout
                 android:id="@+id/emptyView"

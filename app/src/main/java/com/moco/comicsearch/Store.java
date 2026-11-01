@@ -179,6 +179,24 @@ public class Store {
         sp.edit().remove(KEY_HISTORY).apply();
     }
 
+    // ------------------------------------------------------------ 导入 / 导出
+
+    public String rawFavorites() {
+        return sp.getString(KEY_FAV, "[]");
+    }
+
+    public void putRawFavorites(String raw) {
+        sp.edit().putString(KEY_FAV, raw == null || raw.isEmpty() ? "[]" : raw).apply();
+    }
+
+    public String rawReadHistory() {
+        return sp.getString(KEY_HISTORY, "[]");
+    }
+
+    public void putRawReadHistory(String raw) {
+        sp.edit().putString(KEY_HISTORY, raw == null || raw.isEmpty() ? "[]" : raw).apply();
+    }
+
     private void writeHistory(List<Models.History> list) {
         JSONArray arr = new JSONArray();
         for (Models.History h : list) {

@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 详情页：信息头 + 三列图片墙。
  * 进入即开始加载图片并预取到磁盘缓存，退出即停止。
  */
-public class DetailActivity extends AppCompatActivity {
+public class DetailActivity extends SwipeBackActivity {
 
     private Site site;
     private Store store;
@@ -74,12 +74,12 @@ public class DetailActivity extends AppCompatActivity {
 
             @Override
             public void onRead() {
-                openReader();
+                openReader(0);
             }
 
             @Override
             public void onPageClick(int index) {
-                openReader();
+                openReader(index);
             }
         });
 
@@ -191,11 +191,33 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void copyTitle() {
-        String t = album != null ? album.title : (fallbackTitle == null ? "" : fallbackTitle);
+        if (album == null) {
+            return;
+        }
+        final String name = album.title == null ? "" : album.title;
+        final String code = album.id == null ? "" : album.id;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.copy_title)
+                .setItems(new String[]{getString(R.string.copy_name), getString(R.string.copy_code)},
+                        (d, which) -> {
+                            if (which == 0) {
+                                copyToClip(name, getString(R.string.title_copied));
+                            } else {
+                                copyToClip(code, getString(R.string.code_copied));
+                            }
+                        })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void copyToClip(String text, String toast) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm != null && !t.isEmpty()) {
-            cm.setPrimaryClip(ClipData.newPlainText("title", t));
-            Toast.makeText(this, R.string.title_copied, Toast.LENGTH_SHORT).show();
+        if (cm != null) {
+            cm.setPrimaryClip(ClipData.newPlainText("text", text));
+            Toast.makeText(this, toast, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -226,7 +248,7 @@ public class DetailActivity extends AppCompatActivity {
         });
     }
 
-    private void openReader() {
+    private void openReader(int startPage) {
         if (album == null) {
             return;
         }
@@ -246,11 +268,13 @@ public class DetailActivity extends AppCompatActivity {
         }
         Intent i = new Intent(this, ReaderActivity.class);
         i.putExtra("aid", ids.get(0));
+        i.putExtra("albumId", album.id);
         i.putExtra("title", album.title);
         i.putExtra("cover", album.cover);
         i.putStringArrayListExtra("chapterIds", ids);
         i.putStringArrayListExtra("chapterNames", names);
         i.putExtra("index", 0);
+        i.putExtra("page", startPage);
         startActivity(i);
     }
 

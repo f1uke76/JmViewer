@@ -102,7 +102,11 @@ public class SmokeTest {
         assertNotNull(a.findViewById(R.id.rowViewMode));
         assertNotNull(a.findViewById(R.id.rowSite));
         assertNotNull(a.findViewById(R.id.rowMirror));
-        assertNotNull(a.findViewById(R.id.rowIcon));
+        assertNotNull(a.findViewById(R.id.rowHomeRecommend));
+        assertNotNull(a.findViewById(R.id.rowCacheManage));
+        assertNotNull(a.findViewById(R.id.rowClearRecords));
+        assertNotNull(a.findViewById(R.id.rowExport));
+        assertNotNull(a.findViewById(R.id.rowImport));
         c.pause().stop().destroy();
     }
 
@@ -286,7 +290,7 @@ public class SmokeTest {
         TextView title = holder.itemView.findViewById(R.id.title);
         assertEquals("测试漫画", title.getText().toString());
         TextView meta = holder.itemView.findViewById(R.id.meta);
-        assertTrue(meta.getText().toString().contains("作者"));
+        assertTrue(meta.getText().toString().contains("1"));
         assertNotNull(holder.itemView.findViewById(R.id.cover));
     }
 }

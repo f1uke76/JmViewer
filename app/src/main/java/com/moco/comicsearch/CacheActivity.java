@@ -21,7 +21,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /** 缓存管理：按作品列出已缓存的图片，支持逐个清除或全部清空。 */
-public class CacheActivity extends AppCompatActivity {
+public class CacheActivity extends SwipeBackActivity {
 
     private ImageLoader loader;
     private Store store;

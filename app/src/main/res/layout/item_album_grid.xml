@@ -30,4 +30,14 @@
         android:maxLines="2"
         android:ellipsize="end" />
 
+    <TextView
+        android:id="@+id/meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/muted"
+        android:textSize="11sp"
+        android:singleLine="true"
+        android:ellipsize="end" />
+
 </LinearLayout>

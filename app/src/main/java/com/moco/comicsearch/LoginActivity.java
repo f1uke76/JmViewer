@@ -15,7 +15,7 @@ import org.json.JSONObject;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends SwipeBackActivity {
 
     private Site site;
     private TextInputEditText inputUser;

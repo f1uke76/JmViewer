@@ -9,7 +9,6 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -26,10 +25,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.recyclerview.widget.ConcatAdapter;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -55,30 +55,33 @@ public class MainActivity extends AppCompatActivity {
     private ImageLoader loader;
     private final ExecutorService pool = Executors.newFixedThreadPool(3);
 
-    private DrawerLayout drawer;
+    private SwipeDrawerLayout drawer;
     private View navHome, navHistory, navFav, navProfile, navSettings;
     private TextView drawerSite;
 
     private EditText searchInput;
-    private View btnClear;
     private View searchBar;
+    private View pageBar;
+    private ImageView btnSearchAction;
     private TextView barTitle;
     private SwipeRefreshLayout refresh;
     private RecyclerView list;
     private AlbumAdapter adapter;
     private View emptyView;
     private View homeMark;
-    private View profileView;
+    private RecyclerView profileList;
+    private AlbumAdapter favAdapter;
+    private AlbumAdapter histAdapter;
+    private SectionHeaderAdapter headerFav;
+    private SectionHeaderAdapter headerHist;
     private View loading;
     private TextView emptyTitle;
     private TextView emptyMsg;
-    private TextView accountName;
-    private TextView accountHint;
-    private View btnAccount;
     private View historyPanel;
     private LinearLayout historyList;
     private WebView webView;
     private boolean webMode = false;
+    private boolean searchFocused = false;
 
     private int section = SEC_HOME;
     private String keyword = "";
@@ -105,10 +108,10 @@ public class MainActivity extends AppCompatActivity {
         bindViews();
         setupSearch();
         setupList();
+        setupProfile();
         setupDrawer();
 
         showSection(SEC_HOME);
-        IconSwitcher.ensure(this);
     }
 
     private void bindViews() {
@@ -121,26 +124,25 @@ public class MainActivity extends AppCompatActivity {
         drawerSite = findViewById(R.id.drawerSite);
 
         searchInput = findViewById(R.id.searchInput);
-        btnClear = findViewById(R.id.btnClear);
         searchBar = findViewById(R.id.searchBar);
+        pageBar = findViewById(R.id.pageBar);
+        btnSearchAction = findViewById(R.id.btnSearchAction);
         barTitle = findViewById(R.id.barTitle);
         refresh = findViewById(R.id.refresh);
         list = findViewById(R.id.list);
         emptyView = findViewById(R.id.emptyView);
         homeMark = findViewById(R.id.homeMark);
-        profileView = findViewById(R.id.profileView);
+        profileList = findViewById(R.id.profileView);
         loading = findViewById(R.id.loading);
         emptyTitle = findViewById(R.id.emptyTitle);
         emptyMsg = findViewById(R.id.emptyMsg);
-        accountName = findViewById(R.id.accountName);
-        accountHint = findViewById(R.id.accountHint);
-        btnAccount = findViewById(R.id.btnAccount);
         historyPanel = findViewById(R.id.historyPanel);
         historyList = findViewById(R.id.historyList);
         webView = findViewById(R.id.webView);
         setupWebView();
 
         findViewById(R.id.btnMenu).setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
+        findViewById(R.id.btnMenuPage).setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
         drawerSite.setText(site.base().replace("https://", "").replace("http://", ""));
 
         refresh.setColorSchemeColors(ContextCompat.getColor(this, R.color.primary));
@@ -174,6 +176,19 @@ public class MainActivity extends AppCompatActivity {
             drawer.closeDrawer(GravityCompat.START);
             startActivity(new Intent(this, SettingsActivity.class));
         });
+
+        // 全页右滑：非根页面先返回，首页/收藏页才打开侧边栏
+        drawer.setOnSwipeRightListener(() -> {
+            if (drawer.isDrawerOpen(GravityCompat.START)) {
+                drawer.closeDrawer(GravityCompat.START);
+                return true;
+            }
+            if (section != SEC_HOME && section != SEC_FAV) {
+                showSection(SEC_HOME);
+                return true;
+            }
+            return false;
+        });
     }
 
     private void setupSearch() {
@@ -184,10 +199,10 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int a, int b, int c) {
-                btnClear.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
                 if (s.length() > 0) {
                     hideSearchHistory();
                 }
+                updateSearchAction();
             }
 
             @Override
@@ -195,7 +210,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 键盘「搜索」键 / 回车键 / 数字键盘回车 都要能触发
         searchInput.setOnEditorActionListener((v, actionId, event) -> {
             boolean hit = actionId == EditorInfo.IME_ACTION_SEARCH
                     || actionId == EditorInfo.IME_ACTION_GO
@@ -214,29 +228,26 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        findViewById(R.id.btnSearchIcon).setOnClickListener(v -> performSearch());
-
-        btnClear.setOnClickListener(v -> {
-            searchInput.setText("");
-            searchResults.clear();
-            keyword = "";
-            page = 1;
-            noMore = false;
-            hideSearchHistory();
-            showSection(SEC_HOME);
-        });
-
-        // 点击搜索框立即展开搜索历史
         searchInput.setOnClickListener(v -> {
             if (searchInput.getText().length() == 0) {
                 showSearchHistory();
             }
         });
         searchInput.setOnFocusChangeListener((v, hasFocus) -> {
+            searchFocused = hasFocus;
+            updateSearchAction();
             if (hasFocus && searchInput.getText().length() == 0) {
                 showSearchHistory();
             } else if (!hasFocus) {
                 hideSearchHistory();
+            }
+        });
+
+        btnSearchAction.setOnClickListener(v -> {
+            if (searchFocused) {
+                closeSearch();
+            } else {
+                performSearch();
             }
         });
 
@@ -247,23 +258,29 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /** 搜索框聚焦时右侧显示叉（关闭），否则显示放大镜（搜索）。 */
+    private void updateSearchAction() {
+        if (btnSearchAction == null) {
+            return;
+        }
+        btnSearchAction.setImageResource(searchFocused ? R.drawable.ic_close : R.drawable.ic_search);
+        btnSearchAction.setContentDescription(
+                getString(searchFocused ? R.string.cancel : R.string.search));
+    }
+
+    private void closeSearch() {
+        searchInput.setText("");
+        searchInput.clearFocus();
+        hideKeyboard();
+        hideSearchHistory();
+        keyword = "";
+        page = 1;
+        noMore = false;
+        showSection(SEC_HOME);
+    }
+
     private void setupList() {
-        adapter = new AlbumAdapter(loader, new AlbumAdapter.Listener() {
-            @Override
-            public void onClick(Models.Album album) {
-                openDetail(album);
-            }
-
-            @Override
-            public void onCopy(Models.Album album) {
-                copyTitle(album);
-            }
-
-            @Override
-            public void onLongClick(Models.Album album) {
-                showItemMenu(album);
-            }
-        });
+        adapter = new AlbumAdapter(loader, newAlbumListener());
         list.setLayoutManager(new LinearLayoutManager(this));
         list.setAdapter(adapter);
 
@@ -289,6 +306,34 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void setupProfile() {
+        profileList.setLayoutManager(new LinearLayoutManager(this));
+        headerFav = new SectionHeaderAdapter();
+        headerHist = new SectionHeaderAdapter();
+        favAdapter = new AlbumAdapter(loader, newAlbumListener());
+        histAdapter = new AlbumAdapter(loader, newAlbumListener());
+        profileList.setAdapter(new ConcatAdapter(headerFav, favAdapter, headerHist, histAdapter));
+    }
+
+    private AlbumAdapter.Listener newAlbumListener() {
+        return new AlbumAdapter.Listener() {
+            @Override
+            public void onClick(Models.Album album) {
+                openDetail(album);
+            }
+
+            @Override
+            public void onCopy(Models.Album album) {
+                copyTitle(album);
+            }
+
+            @Override
+            public void onLongClick(Models.Album album) {
+                showItemMenu(album);
+            }
+        };
+    }
+
     /** 按当前显示方式切换列表 / 封面网格。 */
     private void applyViewMode() {
         boolean grid = prefs.getViewMode() == 1;
@@ -311,11 +356,13 @@ public class MainActivity extends AppCompatActivity {
         boolean home = which == SEC_HOME;
 
         searchBar.setVisibility(home ? View.VISIBLE : View.GONE);
-        barTitle.setVisibility(home ? View.GONE : View.VISIBLE);
+        pageBar.setVisibility(home ? View.GONE : View.VISIBLE);
         if (!home) {
             barTitle.setText(sectionTitle(which));
+            searchInput.clearFocus();
+            hideKeyboard();
         }
-        profileView.setVisibility(which == SEC_PROFILE ? View.VISIBLE : View.GONE);
+        profileList.setVisibility(which == SEC_PROFILE ? View.VISIBLE : View.GONE);
 
         boolean showWeb = home && webMode;
         webView.setVisibility(showWeb ? View.VISIBLE : View.GONE);
@@ -329,7 +376,7 @@ public class MainActivity extends AppCompatActivity {
         hideSearchHistory();
 
         if (which == SEC_PROFILE) {
-            bindAccount();
+            showProfile();
             return;
         }
         if (showWeb) {
@@ -345,7 +392,6 @@ public class MainActivity extends AppCompatActivity {
         if (which == SEC_HOME) {
             if (keyword.isEmpty()) {
                 if (!prefs.homeRecommend()) {
-                    // 关闭推荐：主页只显示 Jm 标识，保持空白
                     homeAlbums.clear();
                     adapter.submit(new ArrayList<>());
                     emptyView.setVisibility(View.GONE);
@@ -378,6 +424,18 @@ public class MainActivity extends AppCompatActivity {
             if (favs.isEmpty()) {
                 showEmpty(getString(R.string.empty_fav), getString(R.string.empty_fav_msg));
             }
+        }
+    }
+
+    private void showProfile() {
+        headerFav.setTitle(getString(R.string.tab_fav));
+        headerHist.setTitle(getString(R.string.history_chip));
+        List<Models.Album> favs = store.favorites();
+        List<Models.Album> history = historyToAlbums(store.history());
+        favAdapter.submit(favs);
+        histAdapter.submit(history);
+        if (favs.isEmpty() && history.isEmpty()) {
+            showEmpty(getString(R.string.empty_fav), getString(R.string.empty_fav_msg));
         }
     }
 
@@ -452,36 +510,6 @@ public class MainActivity extends AppCompatActivity {
             return getString(R.string.time_hours, (int) (d / 3_600_000L));
         }
         return getString(R.string.time_days, (int) (d / 86_400_000L));
-    }
-
-    private void bindAccount() {
-        String user = prefs.getLoggedUser();
-        if (user == null || user.isEmpty()) {
-            accountName.setText(R.string.not_logged_in);
-            accountHint.setText(R.string.login_hint_short);
-            ((com.google.android.material.button.MaterialButton) btnAccount).setText(R.string.login);
-        } else {
-            accountName.setText(user);
-            accountHint.setText(R.string.logged_in_hint);
-            ((com.google.android.material.button.MaterialButton) btnAccount).setText(R.string.logout);
-        }
-        btnAccount.setOnClickListener(v -> {
-            if (isLoggedIn()) {
-                new MaterialAlertDialogBuilder(this)
-                        .setTitle(R.string.logout)
-                        .setMessage(accountName.getText())
-                        .setPositiveButton(R.string.logout, (d, w) -> {
-                            site.logout();
-                            prefs.setLoggedUser("");
-                            bindAccount();
-                            Toast.makeText(this, R.string.logout, Toast.LENGTH_SHORT).show();
-                        })
-                        .setNegativeButton(R.string.cancel, null)
-                        .show();
-            } else {
-                startActivity(new Intent(this, LoginActivity.class));
-            }
-        });
     }
 
     private boolean isLoggedIn() {
@@ -870,8 +898,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
-        if (section == SEC_FAV) {
-            showSection(SEC_FAV);
+        if (section == SEC_FAV || section == SEC_PROFILE) {
+            showSection(section);
         }
     }
 
@@ -886,7 +914,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         drawerSite.setText(site.base().replace("https://", "").replace("http://", ""));
-        // 设置页可能改了站点地址，回来后清空旧数据
         if (!site.base().equals(lastBase)) {
             lastBase = site.base();
             homeLoaded = false;
@@ -896,11 +923,6 @@ public class MainActivity extends AppCompatActivity {
             page = 1;
             noMore = false;
         }
-        if (section == SEC_PROFILE) {
-            bindAccount();
-            return;
-        }
-        // 重新渲染，顺便应用设置里改过的显示方式 / 推荐开关
         showSection(section);
     }
 
@@ -934,5 +956,44 @@ public class MainActivity extends AppCompatActivity {
         }
         pool.shutdownNow();
         super.onDestroy();
+    }
+
+    // ------------------------------------------------------------ 分区标题
+
+    private class SectionHeaderAdapter extends RecyclerView.Adapter<SectionHeaderAdapter.VH> {
+
+        private String title = "";
+
+        void setTitle(String t) {
+            title = t == null ? "" : t;
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public VH onCreateViewHolder(@NonNull android.view.ViewGroup parent, int viewType) {
+            View v = android.view.LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_section_header, parent, false);
+            return new VH(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH holder, int position) {
+            holder.text.setText(title);
+        }
+
+        @Override
+        public int getItemCount() {
+            return 1;
+        }
+
+        class VH extends RecyclerView.ViewHolder {
+            TextView text;
+
+            VH(@NonNull View itemView) {
+                super(itemView);
+                text = itemView.findViewById(R.id.sectionTitle);
+            }
+        }
     }
 }

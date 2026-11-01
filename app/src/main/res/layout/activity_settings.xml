@@ -12,7 +12,8 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="6dp"
-        android:paddingEnd="16dp">
+        android:paddingEnd="16dp"
+        android:background="@color/surface">
 
         <ImageView
             android:id="@+id/btnBack"
@@ -32,7 +33,7 @@
             android:layout_marginStart="4dp"
             android:text="@string/settings_title"
             android:textColor="@color/on_surface"
-            android:textSize="16sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -116,7 +117,7 @@
             <LinearLayout
                 android:id="@+id/rowHomeRecommend"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="60dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:paddingStart="20dp"
@@ -147,10 +148,10 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <com.google.android.material.materialswitch.MaterialSwitch
+                <com.moco.comicsearch.PillSwitch
                     android:id="@+id/swHomeRecommend"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="46dp"
+                    android:layout_height="26dp" />
             </LinearLayout>
 
             <TextView
@@ -232,62 +233,6 @@
                 android:textSize="12sp" />
 
             <LinearLayout
-                android:id="@+id/rowIcon"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/icon_style"
-                    android:textColor="@color/on_surface"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/iconValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/rowClearCache"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/clear_cache"
-                    android:textColor="@color/on_surface"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/cacheValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <LinearLayout
                 android:id="@+id/rowCacheManage"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
@@ -322,33 +267,86 @@
                     android:contentDescription="@null" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/rowClearSearch"
+            <LinearLayout
+                android:id="@+id/rowClearRecords"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
+                android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
-                android:text="@string/clear_search_history"
-                android:textColor="@color/on_surface"
-                android:textSize="15sp"
                 android:clickable="true"
                 android:focusable="true"
-                android:background="?attr/selectableItemBackground" />
+                android:background="?attr/selectableItemBackground">
 
-            <TextView
-                android:id="@+id/rowClearRead"
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/clear_records"
+                    android:textColor="@color/on_surface"
+                    android:textSize="15sp" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_chevron"
+                    android:contentDescription="@null" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowExport"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
+                android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
-                android:text="@string/clear_read_history"
-                android:textColor="@color/on_surface"
-                android:textSize="15sp"
                 android:clickable="true"
                 android:focusable="true"
-                android:background="?attr/selectableItemBackground" />
+                android:background="?attr/selectableItemBackground">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/export_entries"
+                    android:textColor="@color/on_surface"
+                    android:textSize="15sp" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_chevron"
+                    android:contentDescription="@null" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowImport"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/import_entries"
+                    android:textColor="@color/on_surface"
+                    android:textSize="15sp" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_chevron"
+                    android:contentDescription="@null" />
+            </LinearLayout>
 
             <TextView
                 android:layout_width="match_parent"
