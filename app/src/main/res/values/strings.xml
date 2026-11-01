@@ -197,6 +197,11 @@
     <string name="download_pause">暂停下载</string>
     <string name="select_all">全选</string>
     <string name="deselect_all">全不选</string>
+    <string name="export_selected">导出</string>
+    <string name="export_none">没有可导出的已下载漫画</string>
+    <string name="exporting">正在导出…</string>
+    <string name="export_done">已导出 %1$d 个文件</string>
+    <string name="export_failed">导出失败</string>
 
     <!-- 0.3.9 -->
     <string name="import_export">导入与导出</string>

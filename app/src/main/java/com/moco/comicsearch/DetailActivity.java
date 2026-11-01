@@ -40,6 +40,11 @@ public class DetailActivity extends SwipeBackActivity {
     private TextView barTitle;
     private DetailAdapter adapter;
     private final AtomicBoolean prefetchCancel = new AtomicBoolean(false);
+    private final DownloadManager.Listener dlListener = () -> {
+        if (album != null && adapter != null) {
+            adapter.setDownloaded(isDownloaded(album.id));
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,6 +91,10 @@ public class DetailActivity extends SwipeBackActivity {
                 if (album == null) {
                     return;
                 }
+                if (isDownloaded(album.id)) {
+                    Ui.toast(DetailActivity.this, DetailActivity.this.getString(R.string.downloaded));
+                    return;
+                }
                 DownloadManager dm = DownloadManager.get(DetailActivity.this);
                 dm.enqueue(album, currentChapterId());
                 dm.start(album.id);
@@ -107,6 +116,7 @@ public class DetailActivity extends SwipeBackActivity {
         });
         contentView.setLayoutManager(glm);
         contentView.setAdapter(adapter);
+        DownloadManager.get(this).addListener(dlListener);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 
@@ -123,6 +133,7 @@ public class DetailActivity extends SwipeBackActivity {
                 barTitle.setText(cached.title);
             }
             adapter.setAlbum(cached, store.isFavorite(cached.id));
+            adapter.setDownloaded(isDownloaded(cached.id));
             Models.ChapterContent cachedContent = store.getCachedChapter(currentChapterId());
             if (cachedContent != null) {
                 content = cachedContent;
@@ -151,6 +162,7 @@ public class DetailActivity extends SwipeBackActivity {
                     album = a;
                     barTitle.setText(a.title.isEmpty() ? getString(R.string.detail) : a.title);
                     adapter.setAlbum(a, store.isFavorite(a.id));
+                    adapter.setDownloaded(isDownloaded(a.id));
                     if (content == null) {
                         loadPages();
                     }
@@ -299,6 +311,7 @@ public class DetailActivity extends SwipeBackActivity {
             Ui.toast(this, this.getString(R.string.favorited));
         }
         adapter.setAlbum(album, !fav);
+        adapter.setDownloaded(isDownloaded(album.id));
 
         if (prefs().getLoggedUser().isEmpty()) {
             return;
@@ -344,6 +357,19 @@ public class DetailActivity extends SwipeBackActivity {
     }
 
     // ------------------------------------------------------------ 下载
+
+    private boolean isDownloaded(String id) {
+        DownloadManager.Task t = DownloadManager.get(this).get(id);
+        return t != null && t.state == 3;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (album != null && adapter != null) {
+            adapter.setDownloaded(isDownloaded(album.id));
+        }
+    }
 
     private void downloadChapter() {
         if (album == null) {
@@ -410,6 +436,7 @@ public class DetailActivity extends SwipeBackActivity {
 
     @Override
     protected void onDestroy() {
+        DownloadManager.get(this).removeListener(dlListener);
         prefetchCancel.set(true);
         pool.shutdownNow();
         super.onDestroy();

@@ -9,6 +9,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.provider.DocumentsContract;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.Editable;
@@ -35,6 +36,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
@@ -46,6 +49,9 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -77,7 +83,10 @@ public class MainActivity extends AppCompatActivity {
     private ImageView searchFab;
     private View selectionBar;
     private ImageView btnSelAll;
-    private View btnSelStart, btnSelPause, btnSelDelete;
+    private View btnSelExport, btnSelPause, btnSelDelete;
+    private ImageView btnSelStart;
+    private final List<DownloadManager.Task> pendingExport = new ArrayList<>();
+    private ActivityResultLauncher<Uri> exportTreeLauncher;
     private boolean selectionMode = false;
     private boolean selectionUiShown = false;
     private final java.util.Set<String> selectedIds = new java.util.HashSet<>();
@@ -206,6 +215,7 @@ public class MainActivity extends AppCompatActivity {
         searchFab = findViewById(R.id.searchFab);
         selectionBar = findViewById(R.id.selectionBar);
         btnSelAll = findViewById(R.id.btnSelAll);
+        btnSelExport = findViewById(R.id.btnSelExport);
         btnSelStart = findViewById(R.id.btnSelStart);
         btnSelPause = findViewById(R.id.btnSelPause);
         btnSelDelete = findViewById(R.id.btnSelDelete);
@@ -237,7 +247,8 @@ public class MainActivity extends AppCompatActivity {
         });
         searchFab.setOnClickListener(v -> expandSearch());
         btnSelAll.setOnClickListener(v -> toggleSelectAll());
-        btnSelStart.setOnClickListener(v -> startSelected());
+        btnSelExport.setOnClickListener(v -> startExportSelected());
+        btnSelStart.setOnClickListener(v -> toggleSelectedDownload());
         btnSelPause.setOnClickListener(v -> pauseSelected());
         btnSelDelete.setOnClickListener(v -> deleteSelected());
         drawerSite.setText(site.base().replace("https://", "").replace("http://", ""));
@@ -511,6 +522,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupDownloads() {
         downloadManager = DownloadManager.get(this);
+        exportTreeLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocumentTree(), uri -> {
+                    if (uri != null) {
+                        copyExport(uri);
+                    }
+                });
     }
 
     private AlbumAdapter.Listener newAlbumListener() {
@@ -925,6 +942,85 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean allSelectedDownloading() {
+        if (downloadManager == null || selectedIds.isEmpty()) {
+            return false;
+        }
+        for (String id : selectedIds) {
+            DownloadManager.Task t = downloadManager.get(id);
+            if (t == null || t.state != 1) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 全部在下载时暂停，否则开始（把未开始的补上）。 */
+    private void toggleSelectedDownload() {
+        if (allSelectedDownloading()) {
+            pauseSelected();
+        } else {
+            startSelected();
+        }
+    }
+
+    private void startExportSelected() {
+        if (downloadManager == null) {
+            return;
+        }
+        pendingExport.clear();
+        for (String id : selectedIds) {
+            DownloadManager.Task t = downloadManager.get(id);
+            if (t != null && t.state == 3 && t.zipPath != null && !t.zipPath.isEmpty()
+                    && new File(t.zipPath).exists()) {
+                pendingExport.add(t);
+            }
+        }
+        if (pendingExport.isEmpty()) {
+            Ui.toast(this, getString(R.string.export_none));
+            return;
+        }
+        Ui.toast(this, getString(R.string.exporting));
+        exportTreeLauncher.launch(null);
+    }
+
+    private void copyExport(Uri treeUri) {
+        final List<DownloadManager.Task> tasks = new ArrayList<>(pendingExport);
+        if (tasks.isEmpty()) {
+            return;
+        }
+        new Thread(() -> {
+            int ok = 0;
+            for (DownloadManager.Task t : tasks) {
+                try {
+                    File src = new File(t.zipPath);
+                    String treeId = DocumentsContract.getTreeDocumentId(treeUri);
+                    Uri parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeId);
+                    Uri doc = DocumentsContract.createDocument(
+                            getContentResolver(), parent, "application/zip", src.getName());
+                    if (doc == null) {
+                        continue;
+                    }
+                    try (InputStream in = new java.io.FileInputStream(src);
+                         OutputStream out = getContentResolver().openOutputStream(doc)) {
+                        if (out == null) {
+                            continue;
+                        }
+                        byte[] buf = new byte[16384];
+                        int n;
+                        while ((n = in.read(buf)) > 0) {
+                            out.write(buf, 0, n);
+                        }
+                    }
+                    ok++;
+                } catch (Exception ignored) {
+                }
+            }
+            final int count = ok;
+            runOnUiThread(() -> Ui.toast(this, getString(R.string.export_done, count)));
+        }).start();
+    }
+
     private void toggleSelection(Models.Album album) {
         if (album == null) {
             return;
@@ -953,6 +1049,7 @@ public class MainActivity extends AppCompatActivity {
             adapter.setSelectedIds(selectedIds);
         }
         boolean download = section == SEC_DOWNLOAD;
+        boolean allDownloading = download && allSelectedDownloading();
         btnSelAll.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         if (selectionMode) {
             boolean all = allSelected();
@@ -961,8 +1058,14 @@ public class MainActivity extends AppCompatActivity {
             btnSelAll.setContentDescription(getString(
                     all ? R.string.deselect_all : R.string.select_all));
         }
+        btnSelExport.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
         btnSelStart.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
-        btnSelPause.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
+        btnSelPause.setVisibility(View.GONE);
+        if (selectionMode && download) {
+            btnSelStart.setImageResource(allDownloading ? R.drawable.ic_pause : R.drawable.ic_play);
+            btnSelStart.setContentDescription(getString(
+                    allDownloading ? R.string.download_pause : R.string.download_start));
+        }
         if (selectionMode != selectionUiShown) {
             selectionUiShown = selectionMode;
             animateSelectionBar(selectionMode);
@@ -992,9 +1095,10 @@ public class MainActivity extends AppCompatActivity {
             selectionBar.setAlpha(1f);
             selectionBar.setTranslationY(0f);
             animateSelButton(btnSelAll, 0);
-            animateSelButton(btnSelStart, 55);
-            animateSelButton(btnSelPause, 110);
-            animateSelButton(btnSelDelete, 165);
+            animateSelButton(btnSelExport, 50);
+            animateSelButton(btnSelStart, 100);
+            animateSelButton(btnSelPause, 150);
+            animateSelButton(btnSelDelete, 200);
         } else {
             selectionBar.animate().alpha(0f).translationY(dp(70)).setDuration(160)
                     .setInterpolator(new AccelerateInterpolator())

@@ -304,6 +304,19 @@
                     android:focusable="true" />
 
                 <ImageView
+                    android:id="@+id/btnSelExport"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_marginBottom="12dp"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_export"
+                    android:tint="@color/white"
+                    android:background="@drawable/bg_circle_primary"
+                    android:contentDescription="@string/export_selected"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <ImageView
                     android:id="@+id/btnSelStart"
                     android:layout_width="60dp"
                     android:layout_height="60dp"

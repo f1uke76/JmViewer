@@ -43,6 +43,7 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     private String aid = "";
     private int scrambleId = 0;
     private boolean fav = false;
+    private boolean downloaded = false;
 
     public DetailAdapter(ImageLoader loader, Listener listener) {
         this.loader = loader;
@@ -53,6 +54,13 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         this.album = album;
         this.fav = fav;
         notifyDataSetChanged();
+    }
+
+    public void setDownloaded(boolean downloaded) {
+        if (this.downloaded != downloaded) {
+            this.downloaded = downloaded;
+            notifyItemChanged(0);
+        }
     }
 
     public void setPages(Models.ChapterContent content) {
@@ -142,6 +150,9 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         h.btnCopy.setOnClickListener(v -> listener.onCopy());
         h.btnFav.setOnClickListener(v -> listener.onFavorite());
         h.btnRead.setOnClickListener(v -> listener.onRead());
+        h.btnDownload.setImageResource(downloaded ? R.drawable.ic_check : R.drawable.ic_download);
+        h.btnDownload.setContentDescription(h.itemView.getContext().getString(
+                downloaded ? R.string.downloaded : R.string.download));
         h.btnDownload.setOnClickListener(v -> listener.onDownload());
     }
 
