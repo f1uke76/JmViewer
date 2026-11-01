@@ -423,28 +423,28 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /** 圆形按钮展开成底部横条搜索框。 */
+    /** 圆形按钮展开成底部横条搜索框：从按钮位置横向生长，避免圆形硬切成矩形。 */
     private void expandSearch() {
         if (searchExpanded) {
             return;
         }
         searchExpanded = true;
-        searchFab.animate().scaleX(0f).scaleY(0f).alpha(0f).setDuration(140)
+        searchFab.animate().scaleX(0f).scaleY(0f).alpha(0f).setDuration(120)
                 .withEndAction(() -> searchFab.setVisibility(View.GONE)).start();
         searchBarExpanded.setVisibility(View.VISIBLE);
         searchBarExpanded.post(() -> {
-            int w = searchBarExpanded.getWidth();
-            int h = searchBarExpanded.getHeight();
-            if (w > 0 && h > 0) {
-                float cx = w - dp(30);
-                float cy = h / 2f;
-                float end = (float) Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy));
-                Animator reveal = ViewAnimationUtils.createCircularReveal(
-                        searchBarExpanded, (int) cx, (int) cy, 0f, end);
-                reveal.setDuration(260);
-                reveal.setInterpolator(new DecelerateInterpolator());
-                reveal.start();
-            }
+            float pivotX = searchBarExpanded.getWidth() - dp(34);
+            float pivotY = searchBarExpanded.getHeight() / 2f;
+            searchBarExpanded.setPivotX(pivotX);
+            searchBarExpanded.setPivotY(pivotY);
+            searchBarExpanded.setScaleX(0.16f);
+            searchBarExpanded.setScaleY(1.15f);
+            searchBarExpanded.setAlpha(0f);
+            searchBarExpanded.animate()
+                    .scaleX(1f).scaleY(1f).alpha(1f)
+                    .setDuration(240)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
         });
         searchInput.requestFocus();
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -469,28 +469,30 @@ public class MainActivity extends AppCompatActivity {
         int w = searchBarExpanded.getWidth();
         int h = searchBarExpanded.getHeight();
         if (w > 0 && h > 0) {
-            float cx = w - dp(30);
-            float cy = h / 2f;
-            float start = (float) Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy));
-            Animator reveal = ViewAnimationUtils.createCircularReveal(
-                    searchBarExpanded, (int) cx, (int) cy, start, 0f);
-            reveal.setDuration(220);
-            reveal.setInterpolator(new AccelerateInterpolator());
-            reveal.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    searchBarExpanded.setVisibility(View.GONE);
-                    searchFab.setVisibility(View.VISIBLE);
-                    searchFab.setScaleX(0f);
-                    searchFab.setScaleY(0f);
-                    searchFab.setAlpha(0f);
-                    searchFab.animate().scaleX(1f).scaleY(1f).alpha(1f)
-                            .setDuration(180).start();
-                }
-            });
-            reveal.start();
+            searchBarExpanded.setPivotX(w - dp(34));
+            searchBarExpanded.setPivotY(h / 2f);
+            searchBarExpanded.animate()
+                    .scaleX(0.16f).scaleY(1.15f).alpha(0f)
+                    .setDuration(180)
+                    .setInterpolator(new AccelerateInterpolator())
+                    .withEndAction(() -> {
+                        searchBarExpanded.setVisibility(View.GONE);
+                        searchBarExpanded.setScaleX(1f);
+                        searchBarExpanded.setScaleY(1f);
+                        searchBarExpanded.setAlpha(1f);
+                        searchFab.setVisibility(View.VISIBLE);
+                        searchFab.setScaleX(0f);
+                        searchFab.setScaleY(0f);
+                        searchFab.setAlpha(0f);
+                        searchFab.animate().scaleX(1f).scaleY(1f).alpha(1f)
+                                .setDuration(160).start();
+                    })
+                    .start();
         } else {
             searchBarExpanded.setVisibility(View.GONE);
+            searchBarExpanded.setScaleX(1f);
+            searchBarExpanded.setScaleY(1f);
+            searchBarExpanded.setAlpha(1f);
             searchFab.setVisibility(View.VISIBLE);
             searchFab.setScaleX(1f);
             searchFab.setScaleY(1f);
