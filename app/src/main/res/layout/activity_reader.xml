@@ -61,7 +61,7 @@
             android:layout_height="42dp"
             android:layout_marginStart="6dp"
             android:padding="9dp"
-            android:src="@drawable/ic_star_border"
+            android:src="@drawable/ic_favorite"
             android:tint="#FFFFFF"
             android:contentDescription="@string/favorite"
             android:clickable="true"

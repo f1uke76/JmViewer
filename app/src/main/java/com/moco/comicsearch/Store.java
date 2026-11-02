@@ -297,6 +297,26 @@ public class Store {
         }
     }
 
+    /** 所有缓存过元信息的作品（含下载时写入的完整信息）。 */
+    public List<Models.Album> allCachedAlbums() {
+        List<Models.Album> out = new ArrayList<>();
+        try {
+            JSONObject root = new JSONObject(sp.getString(KEY_ALBUM_CACHE, "{}"));
+            java.util.Iterator<String> it = root.keys();
+            while (it.hasNext()) {
+                JSONObject o = root.optJSONObject(it.next());
+                if (o != null) {
+                    Models.Album a = albumFromJson(o);
+                    if (!a.id.isEmpty()) {
+                        out.add(a);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
     /** 从本地收藏 / 历史里兜底找作品，保证无网也能进详情。 */
     public Models.Album findLocalAlbum(String id) {
         if (id == null || id.isEmpty()) {

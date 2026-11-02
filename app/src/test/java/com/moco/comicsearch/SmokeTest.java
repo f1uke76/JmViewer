@@ -103,7 +103,7 @@ public class SmokeTest {
         assertNotNull(a.findViewById(R.id.rowTheme));
         assertNotNull(a.findViewById(R.id.rowViewMode));
         assertNotNull(a.findViewById(R.id.rowSite));
-        assertNotNull(a.findViewById(R.id.rowMirror));
+        assertNotNull(a.findViewById(R.id.btnMirror));
         assertNotNull(a.findViewById(R.id.rowHomeRecommend));
         assertNotNull(a.findViewById(R.id.rowCacheManage));
         assertNotNull(a.findViewById(R.id.rowClearRecords));

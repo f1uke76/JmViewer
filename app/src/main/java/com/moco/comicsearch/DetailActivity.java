@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -40,9 +41,25 @@ public class DetailActivity extends SwipeBackActivity {
     private TextView barTitle;
     private DetailAdapter adapter;
     private final AtomicBoolean prefetchCancel = new AtomicBoolean(false);
+    private boolean downloadNotified;
     private final DownloadManager.Listener dlListener = () -> {
-        if (album != null && adapter != null) {
-            adapter.setDownloaded(isDownloaded(album.id));
+        if (album == null || adapter == null) {
+            return;
+        }
+        DownloadManager.Task t = DownloadManager.get(this).get(album.id);
+        if (t == null) {
+            refreshDownloadState();
+            return;
+        }
+        if (t.state == 3) {
+            if (!downloadNotified) {
+                downloadNotified = true;
+                adapter.animateDownloadDone(() ->
+                        Ui.toast(DetailActivity.this, getString(R.string.download_done)));
+            }
+        } else {
+            downloadNotified = false;
+            adapter.setDownloadProgress(t.progress());
         }
     };
 
@@ -95,6 +112,7 @@ public class DetailActivity extends SwipeBackActivity {
                     Ui.toast(DetailActivity.this, DetailActivity.this.getString(R.string.downloaded));
                     return;
                 }
+                downloadNotified = false;
                 DownloadManager dm = DownloadManager.get(DetailActivity.this);
                 dm.enqueue(album, currentChapterId());
                 dm.start(album.id);
@@ -118,6 +136,33 @@ public class DetailActivity extends SwipeBackActivity {
         contentView.setAdapter(adapter);
         DownloadManager.get(this).addListener(dlListener);
 
+        final android.view.GestureDetector gd = new android.view.GestureDetector(this,
+                new android.view.GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onFling(android.view.MotionEvent e1, android.view.MotionEvent e2,
+                                           float vx, float vy) {
+                        if (e1 == null || e2 == null) {
+                            return false;
+                        }
+                        float dx = e2.getX() - e1.getX();
+                        float dy = Math.abs(e2.getY() - e1.getY());
+                        if (dx > 120 && dx > dy) {
+                            startActivity(new Intent(DetailActivity.this, CommentsActivity.class)
+                                    .putExtra("id", albumId));
+                            return true;
+                        }
+                        return false;
+                    }
+                });
+        contentView.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
+            @Override
+            public boolean onInterceptTouchEvent(@NonNull RecyclerView rv,
+                                                 android.view.MotionEvent e) {
+                gd.onTouchEvent(e);
+                return false;
+            }
+        });
+
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 
         barTitle.setText(fallbackTitle == null ? getString(R.string.detail) : fallbackTitle);
@@ -128,12 +173,15 @@ public class DetailActivity extends SwipeBackActivity {
             cached = store.findLocalAlbum(albumId);
         }
         if (cached != null) {
+            if ((cached.cover == null || cached.cover.isEmpty()) && fallbackCover != null) {
+                cached.cover = fallbackCover;
+            }
             album = cached;
             if (!cached.title.isEmpty()) {
                 barTitle.setText(cached.title);
             }
             adapter.setAlbum(cached, store.isFavorite(cached.id));
-            adapter.setDownloaded(isDownloaded(cached.id));
+            refreshDownloadState();
             Models.ChapterContent cachedContent = store.getCachedChapter(currentChapterId());
             if (cachedContent != null) {
                 content = cachedContent;
@@ -155,14 +203,19 @@ public class DetailActivity extends SwipeBackActivity {
                     a.title = fallbackTitle == null ? "" : fallbackTitle;
                 }
                 if (a.cover.isEmpty()) {
-                    a.cover = fallbackCover == null ? "" : fallbackCover;
+                    Models.Album ca = store.getCachedAlbum(albumId);
+                    if (ca != null && ca.cover != null && !ca.cover.isEmpty()) {
+                        a.cover = ca.cover;
+                    } else {
+                        a.cover = fallbackCover == null ? "" : fallbackCover;
+                    }
                 }
                 store.saveAlbum(a);
                 runOnUiThread(() -> {
                     album = a;
                     barTitle.setText(a.title.isEmpty() ? getString(R.string.detail) : a.title);
                     adapter.setAlbum(a, store.isFavorite(a.id));
-                    adapter.setDownloaded(isDownloaded(a.id));
+                    refreshDownloadState();
                     if (content == null) {
                         loadPages();
                     }
@@ -358,6 +411,18 @@ public class DetailActivity extends SwipeBackActivity {
 
     // ------------------------------------------------------------ 下载
 
+    private void refreshDownloadState() {
+        if (album == null || adapter == null) {
+            return;
+        }
+        DownloadManager.Task t = DownloadManager.get(this).get(album.id);
+        if (t != null && t.state != 3) {
+            adapter.setDownloadProgress(t.progress());
+        } else {
+            adapter.setDownloaded(isDownloaded(album.id));
+        }
+    }
+
     private boolean isDownloaded(String id) {
         DownloadManager.Task t = DownloadManager.get(this).get(id);
         return t != null && t.state == 3;
@@ -366,9 +431,7 @@ public class DetailActivity extends SwipeBackActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (album != null && adapter != null) {
-            adapter.setDownloaded(isDownloaded(album.id));
-        }
+        refreshDownloadState();
     }
 
     private void downloadChapter() {

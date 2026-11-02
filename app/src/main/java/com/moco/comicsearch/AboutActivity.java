@@ -40,6 +40,8 @@ public class AboutActivity extends SwipeBackActivity {
         findViewById(R.id.rowCheckUpdate).setOnClickListener(v -> checkUpdate(true));
         findViewById(R.id.rowReleaseNotes).setOnClickListener(v ->
                 startActivity(new Intent(this, ReleaseNotesActivity.class)));
+        findViewById(R.id.rowGithub).setOnClickListener(v ->
+                openUrl("https://github.com/haowen76/JmViewer"));
 
         checkUpdate(false);
     }

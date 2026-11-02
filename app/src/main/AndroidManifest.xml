@@ -171,6 +171,10 @@
         <activity
             android:name=".ReleaseNotesActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".CommentsActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

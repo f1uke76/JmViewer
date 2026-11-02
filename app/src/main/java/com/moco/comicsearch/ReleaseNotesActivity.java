@@ -32,10 +32,33 @@ public class ReleaseNotesActivity extends SwipeBackActivity {
             while ((n = is.read(buf)) > 0) {
                 bos.write(buf, 0, n);
             }
-            return stripMarkdown(new String(bos.toByteArray(), StandardCharsets.UTF_8));
+            String raw = new String(bos.toByteArray(), StandardCharsets.UTF_8);
+            return stripMarkdown(currentVersionSection(raw, BuildConfig.VERSION_NAME));
         } catch (Exception e) {
             return getString(R.string.about_text);
         }
+    }
+
+    /** 只保留当前版本对应的章节。 */
+    private static String currentVersionSection(String md, String version) {
+        String[] lines = md.split("\n");
+        StringBuilder out = new StringBuilder();
+        boolean in = false;
+        for (String line : lines) {
+            if (line.startsWith("### ")) {
+                if (in) {
+                    break;
+                }
+                if (line.contains(version)) {
+                    in = true;
+                }
+                continue;
+            }
+            if (in) {
+                out.append(line).append('\n');
+            }
+        }
+        return out.length() > 0 ? out.toString() : md;
     }
 
     private static String stripMarkdown(String md) {

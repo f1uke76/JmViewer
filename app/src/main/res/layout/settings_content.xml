@@ -179,38 +179,21 @@
                 android:layout_height="wrap_content"
                 android:textColor="@color/muted"
                 android:textSize="13sp"
-                android:maxWidth="220dp"
+                android:maxWidth="200dp"
                 android:singleLine="true"
                 android:ellipsize="middle" />
-        </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/rowMirror"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackground">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/pick_mirror_title"
-                android:textColor="@color/on_surface"
-                android:textSize="15sp" />
-
-            <TextView
-                android:id="@+id/mirrorValue"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/official_hint"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="13sp" />
+            <ImageView
+                android:id="@+id/btnMirror"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="2dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_triangle_down"
+                android:contentDescription="@string/pick_mirror_title"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackgroundBorderless" />
         </LinearLayout>
 
         <TextView

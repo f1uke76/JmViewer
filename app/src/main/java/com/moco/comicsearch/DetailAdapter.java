@@ -44,6 +44,8 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     private int scrambleId = 0;
     private boolean fav = false;
     private boolean downloaded = false;
+    private int progress;
+    private HeaderVH headerVH;
 
     public DetailAdapter(ImageLoader loader, Listener listener) {
         this.loader = loader;
@@ -57,9 +59,30 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     }
 
     public void setDownloaded(boolean downloaded) {
-        if (this.downloaded != downloaded) {
-            this.downloaded = downloaded;
-            notifyItemChanged(0);
+        this.downloaded = downloaded;
+        if (downloaded) {
+            this.progress = 100;
+        }
+        if (headerVH != null) {
+            headerVH.btnDownload.setDownloaded(downloaded);
+        }
+    }
+
+    public void setDownloadProgress(int progress) {
+        this.progress = progress;
+        this.downloaded = false;
+        if (headerVH != null) {
+            headerVH.btnDownload.setProgress(progress);
+        }
+    }
+
+    public void animateDownloadDone(Runnable end) {
+        this.downloaded = true;
+        this.progress = 100;
+        if (headerVH != null) {
+            headerVH.btnDownload.animateToDone(end);
+        } else if (end != null) {
+            end.run();
         }
     }
 
@@ -126,19 +149,28 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
 
         h.cover.setImageBitmap(null);
+        h.cover.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        h.cover.setImageResource(R.drawable.ic_logo);
         final String url = a.cover;
         h.cover.setTag(url);
         if (!url.isEmpty()) {
             loader.loadCover(url, new ImageLoader.Callback() {
+                private boolean retried;
+
                 @Override
                 public void onLoaded(Bitmap bitmap) {
                     if (url.equals(h.cover.getTag())) {
+                        h.cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
                         h.cover.setImageBitmap(bitmap);
                     }
                 }
 
                 @Override
                 public void onError(Exception e) {
+                    if (!retried) {
+                        retried = true;
+                        h.cover.postDelayed(() -> loader.loadCover(url, this), 600);
+                    }
                 }
             });
         }
@@ -150,10 +182,14 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         h.btnCopy.setOnClickListener(v -> listener.onCopy());
         h.btnFav.setOnClickListener(v -> listener.onFavorite());
         h.btnRead.setOnClickListener(v -> listener.onRead());
-        h.btnDownload.setImageResource(downloaded ? R.drawable.ic_check : R.drawable.ic_download);
+        h.btnDownload.setDownloaded(downloaded);
+        if (!downloaded) {
+            h.btnDownload.setProgress(progress);
+        }
         h.btnDownload.setContentDescription(h.itemView.getContext().getString(
                 downloaded ? R.string.downloaded : R.string.download));
         h.btnDownload.setOnClickListener(v -> listener.onDownload());
+        headerVH = h;
     }
 
     private void bindPage(PageVH h, int index) {
@@ -227,7 +263,7 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         ImageView btnCopy;
         ImageView btnFav;
         ImageView btnRead;
-        ImageView btnDownload;
+        DownloadProgressButton btnDownload;
 
         HeaderVH(View v) {
             super(v);

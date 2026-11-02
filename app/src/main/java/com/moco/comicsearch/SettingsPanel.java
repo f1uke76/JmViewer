@@ -56,7 +56,7 @@ public class SettingsPanel {
         root.findViewById(R.id.rowAccent).setOnClickListener(v -> showAccentDialog());
         root.findViewById(R.id.rowViewMode).setOnClickListener(v -> showViewModeDialog());
         root.findViewById(R.id.rowSite).setOnClickListener(v -> showSiteDialog());
-        root.findViewById(R.id.rowMirror).setOnClickListener(v -> MirrorPicker.show(activity, this::applyMirror));
+        root.findViewById(R.id.btnMirror).setOnClickListener(v -> MirrorPicker.show(activity, this::applyMirror));
         root.findViewById(R.id.rowCacheManage).setOnClickListener(v ->
                 activity.startActivity(new Intent(activity, CacheActivity.class)));
         root.findViewById(R.id.rowClearRecords).setOnClickListener(v -> showClearRecordsDialog());
@@ -183,8 +183,9 @@ public class SettingsPanel {
         content.findViewById(R.id.cbAdBlock).setVisibility(View.GONE);
         content.findViewById(R.id.btnClearHistory).setVisibility(View.GONE);
         content.findViewById(R.id.swWebMode).setVisibility(View.GONE);
+        content.findViewById(R.id.btnMirrorDrop).setVisibility(View.GONE);
 
-        final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.site_url)
                 .setView(content)
                 .setPositiveButton(R.string.save, (d, w) -> {
@@ -198,15 +199,7 @@ public class SettingsPanel {
                     Toast.makeText(activity, site.base(), Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.cancel, null)
-                .create();
-
-        content.findViewById(R.id.btnMirrorDrop).setOnClickListener(v ->
-                MirrorPicker.show(activity, m -> {
-                    dialog.dismiss();
-                    applyMirror(m);
-                }));
-
-        dialog.show();
+                .show();
     }
 
     private void applyMirror(Models.Mirror m) {
