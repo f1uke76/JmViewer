@@ -175,10 +175,9 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             });
         }
 
-        h.btnFav.setColorFilter(fav
-                ? ThemeManager.primary(h.itemView.getContext())
-                : androidx.core.content.ContextCompat.getColor(
-                        h.itemView.getContext(), R.color.muted));
+        h.btnFav.setCircle(false);
+        h.btnFav.setIcon(R.drawable.ic_favorite);
+        h.btnFav.setCheckedState(fav);
         h.btnCopy.setOnClickListener(v -> listener.onCopy());
         h.btnFav.setOnClickListener(v -> listener.onFavorite());
         h.btnRead.setOnClickListener(v -> listener.onRead());
@@ -261,7 +260,7 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         TextView meta;
         LinearLayout tags;
         ImageView btnCopy;
-        ImageView btnFav;
+        ToggleIconButton btnFav;
         ImageView btnRead;
         DownloadProgressButton btnDownload;
 

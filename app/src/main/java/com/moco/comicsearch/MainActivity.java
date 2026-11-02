@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
     private HamburgerDrawable headerMorph;
     private ImageView searchFab;
     private View selectionBar;
-    private ImageView btnSelAll;
+    private ToggleIconButton btnSelAll;
     private View btnSelExport, btnSelPause, btnSelDelete;
     private ImageView btnSelStart;
     private final List<DownloadManager.Task> pendingExport = new ArrayList<>();
@@ -356,11 +356,7 @@ public class MainActivity extends AppCompatActivity {
         if (searchExpanded) {
             resetSearchImmediate();
         }
-        if (which == SEC_HOME) {
-            // 从侧边栏回到主页：退出搜索态，恢复推荐流
-            keyword = "";
-            searchResults.clear();
-        }
+        // 回到主页时保留上一次的搜索结果，不主动清空
         showSection(which);
     }
 
@@ -1080,8 +1076,11 @@ public class MainActivity extends AppCompatActivity {
         new Thread(() -> {
             int ok = 0;
             for (DownloadManager.Task t : tasks) {
+                File temp = null;
                 try {
                     File src = new File(t.zipPath);
+                    temp = new File(getCacheDir(), "export_" + t.albumId + ".zip");
+                    writeExportZip(t, src, temp);
                     String treeId = DocumentsContract.getTreeDocumentId(treeUri);
                     Uri parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeId);
                     Uri doc = DocumentsContract.createDocument(
@@ -1089,7 +1088,7 @@ public class MainActivity extends AppCompatActivity {
                     if (doc == null) {
                         continue;
                     }
-                    try (InputStream in = new java.io.FileInputStream(src);
+                    try (InputStream in = new java.io.FileInputStream(temp);
                          OutputStream out = getContentResolver().openOutputStream(doc)) {
                         if (out == null) {
                             continue;
@@ -1102,11 +1101,54 @@ public class MainActivity extends AppCompatActivity {
                     }
                     ok++;
                 } catch (Exception ignored) {
+                } finally {
+                    if (temp != null) {
+                        //noinspection ResultOfMethodCallIgnored
+                        temp.delete();
+                    }
                 }
             }
             final int count = ok;
             runOnUiThread(() -> Ui.toast(this, getString(R.string.export_done, count)));
         }).start();
+    }
+
+    /** 导出前重打包：在压缩包内加一份 readme.md（名称 / 代号 / 标签）。 */
+    private void writeExportZip(DownloadManager.Task t, File src, File out) throws Exception {
+        Models.Album meta = dlMeta.get(t.albumId);
+        if (meta == null) {
+            meta = store.getCachedAlbum(t.albumId);
+        }
+        StringBuilder md = new StringBuilder();
+        md.append("# ").append(t.title == null ? t.albumId : t.title).append("\n\n");
+        md.append("- 代号：").append(t.albumId).append("\n");
+        if (meta != null && !meta.tags.isEmpty()) {
+            md.append("- 标签：").append(android.text.TextUtils.join(" / ", meta.tags)).append("\n");
+        }
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(
+                new java.io.FileOutputStream(out))) {
+            zos.putNextEntry(new java.util.zip.ZipEntry("readme.md"));
+            zos.write(md.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            zos.closeEntry();
+            try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(src)) {
+                java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zip.entries();
+                byte[] buf = new byte[16384];
+                while (en.hasMoreElements()) {
+                    java.util.zip.ZipEntry e = en.nextElement();
+                    if (e.isDirectory() || "readme.md".equalsIgnoreCase(e.getName())) {
+                        continue;
+                    }
+                    zos.putNextEntry(new java.util.zip.ZipEntry(e.getName()));
+                    try (InputStream in = zip.getInputStream(e)) {
+                        int n;
+                        while ((n = in.read(buf)) > 0) {
+                            zos.write(buf, 0, n);
+                        }
+                    }
+                    zos.closeEntry();
+                }
+            }
+        }
     }
 
     private void toggleSelection(Models.Album album) {
@@ -1137,16 +1179,10 @@ public class MainActivity extends AppCompatActivity {
         btnSelAll.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         if (selectionMode) {
             boolean all = allSelected();
-            btnSelAll.setImageResource(all
-                    ? R.drawable.ic_deselect_all : R.drawable.ic_select_all);
+            btnSelAll.setIcon(R.drawable.ic_select_all);
+            btnSelAll.setCheckedState(all);
             btnSelAll.setContentDescription(getString(
                     all ? R.string.deselect_all : R.string.select_all));
-            // 全选：主题色底 + 白勾；全不选：白底 + 主题色勾
-            btnSelAll.setBackgroundResource(all
-                    ? R.drawable.bg_circle_surface : R.drawable.bg_circle_primary);
-            btnSelAll.setColorFilter(all
-                    ? ThemeManager.primary(this)
-                    : ContextCompat.getColor(this, R.color.white));
         }
         btnSelExport.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
         btnSelStart.setVisibility(selectionMode && download ? View.VISIBLE : View.GONE);
@@ -1222,20 +1258,45 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle(R.string.remove)
                 .setMessage(getString(R.string.confirm_delete_selected, count))
                 .setPositiveButton(R.string.remove, (d, w) -> {
-                    for (String id : new ArrayList<>(selectedIds)) {
-                        if (section == SEC_FAV) {
-                            store.removeFavorite(id);
-                        } else if (section == SEC_HISTORY) {
-                            store.removeHistory(id);
-                        } else if (section == SEC_DOWNLOAD && downloadManager != null) {
-                            downloadManager.remove(id);
+                    fadeOutSelected(() -> {
+                        for (String id : new ArrayList<>(selectedIds)) {
+                            if (section == SEC_FAV) {
+                                store.removeFavorite(id);
+                            } else if (section == SEC_HISTORY) {
+                                store.removeHistory(id);
+                            } else if (section == SEC_DOWNLOAD && downloadManager != null) {
+                                downloadManager.remove(id);
+                            }
                         }
-                    }
-                    exitSelection();
-                    showSection(section);
+                        exitSelection();
+                        showSection(section);
+                    });
                 })
                 .setNegativeButton(R.string.cancel, null)
                 .show();
+    }
+
+    /** 删除前让选中的条目淡出，避免列表瞬间消失。 */
+    private void fadeOutSelected(Runnable action) {
+        boolean any = false;
+        if (adapter != null) {
+            for (int i = 0; i < adapter.count(); i++) {
+                Models.Album a = adapter.items().get(i);
+                if (!selectedIds.contains(a.id)) {
+                    continue;
+                }
+                RecyclerView.ViewHolder vh = list.findViewHolderForAdapterPosition(i);
+                if (vh != null) {
+                    any = true;
+                    vh.itemView.animate().alpha(0f).setDuration(180).start();
+                }
+            }
+        }
+        if (any) {
+            list.postDelayed(action, 180);
+        } else {
+            action.run();
+        }
     }
 
     private void startSelected() {

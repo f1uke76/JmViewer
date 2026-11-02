@@ -165,6 +165,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
         Models.Album a = items.get(position);
+        h.itemView.setAlpha(1f);
         if (h.check != null) {
             h.check.setVisibility(View.GONE);
         }

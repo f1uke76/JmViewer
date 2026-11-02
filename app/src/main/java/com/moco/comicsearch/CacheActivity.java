@@ -31,10 +31,11 @@ public class CacheActivity extends SwipeBackActivity {
     private ImageLoader loader;
     private Store store;
     private AlbumAdapter adapter;
+    private RecyclerView list;
     private View emptyView;
     private TextView titleView;
     private View selectionBar;
-    private ImageView btnSelAll;
+    private ToggleIconButton btnSelAll;
     private View btnDelete;
 
     private final List<Models.Album> current = new ArrayList<>();
@@ -62,7 +63,7 @@ public class CacheActivity extends SwipeBackActivity {
         btnSelAll = findViewById(R.id.btnCacheSelAll);
         btnDelete = findViewById(R.id.btnCacheDelete);
 
-        RecyclerView list = findViewById(R.id.list);
+        list = findViewById(R.id.list);
         boolean grid = new Prefs(this).getViewMode() == 1;
         list.setLayoutManager(grid
                 ? new GridLayoutManager(this, 2) : new LinearLayoutManager(this));
@@ -97,9 +98,11 @@ public class CacheActivity extends SwipeBackActivity {
             @Override
             public void onTrash(Models.Album album) {
                 String aid = album.readId == null || album.readId.isEmpty() ? album.id : album.readId;
-                loader.clearAlbum(aid);
-                Ui.toast(CacheActivity.this, CacheActivity.this.getString(R.string.cache_cleared_album));
-                load();
+                fadeOutItem(album.id, () -> {
+                    loader.clearAlbum(aid);
+                    Ui.toast(CacheActivity.this, CacheActivity.this.getString(R.string.cache_cleared_album));
+                    load();
+                });
             }
 
             @Override
@@ -270,17 +273,49 @@ public class CacheActivity extends SwipeBackActivity {
         if (selectionMode) {
             titleView.setText(getString(R.string.selected_count, selectedIds.size()));
             boolean all = allSelected();
-            btnSelAll.setImageResource(all
-                    ? R.drawable.ic_deselect_all : R.drawable.ic_select_all);
-            btnSelAll.setBackgroundResource(all
-                    ? R.drawable.bg_circle_surface : R.drawable.bg_circle_primary);
-            btnSelAll.setColorFilter(all
-                    ? ThemeManager.primary(this)
-                    : ContextCompat.getColor(this, R.color.white));
+            btnSelAll.setIcon(R.drawable.ic_select_all);
+            btnSelAll.setCheckedState(all);
             btnSelAll.setContentDescription(getString(
                     all ? R.string.deselect_all : R.string.select_all));
         } else {
             titleView.setText(R.string.cache_manage);
+        }
+    }
+
+    private void fadeOutItem(String id, Runnable action) {
+        int position = -1;
+        for (int i = 0; i < current.size(); i++) {
+            if (current.get(i).id.equals(id)) {
+                position = i;
+                break;
+            }
+        }
+        RecyclerView.ViewHolder vh = position >= 0
+                ? list.findViewHolderForAdapterPosition(position) : null;
+        if (vh != null) {
+            vh.itemView.animate().alpha(0f).setDuration(180).start();
+            list.postDelayed(action, 180);
+        } else {
+            action.run();
+        }
+    }
+
+    private void fadeOutSelected(Runnable action) {
+        boolean any = false;
+        for (int i = 0; i < current.size(); i++) {
+            if (!selectedIds.contains(current.get(i).id)) {
+                continue;
+            }
+            RecyclerView.ViewHolder vh = list.findViewHolderForAdapterPosition(i);
+            if (vh != null) {
+                any = true;
+                vh.itemView.animate().alpha(0f).setDuration(180).start();
+            }
+        }
+        if (any) {
+            list.postDelayed(action, 180);
+        } else {
+            action.run();
         }
     }
 
@@ -293,15 +328,17 @@ public class CacheActivity extends SwipeBackActivity {
                 .setTitle(R.string.clear_cache)
                 .setMessage(getString(R.string.confirm_delete_selected, count))
                 .setPositiveButton(R.string.remove, (d, w) -> {
-                    for (String id : new ArrayList<>(selectedIds)) {
-                        String aid = idToAid.get(id);
-                        if (aid != null) {
-                            loader.clearAlbum(aid);
+                    fadeOutSelected(() -> {
+                        for (String id : new ArrayList<>(selectedIds)) {
+                            String aid = idToAid.get(id);
+                            if (aid != null) {
+                                loader.clearAlbum(aid);
+                            }
                         }
-                    }
-                    Ui.toast(this, this.getString(R.string.cache_cleared_album));
-                    exitSelection();
-                    load();
+                        Ui.toast(this, this.getString(R.string.cache_cleared_album));
+                        exitSelection();
+                        load();
+                    });
                 })
                 .setNegativeButton(R.string.cancel, null)
                 .show();

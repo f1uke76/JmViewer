@@ -100,17 +100,12 @@
             android:clickable="true"
             android:focusable="true" />
 
-        <ImageView
+        <com.moco.comicsearch.ToggleIconButton
             android:id="@+id/btnFav"
             android:layout_width="0dp"
             android:layout_height="46dp"
             android:layout_weight="1"
             android:layout_marginStart="10dp"
-            android:padding="12dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/ic_favorite"
-            android:tint="?attr/colorPrimary"
-            android:background="@drawable/bg_block"
             android:foreground="?attr/selectableItemBackground"
             android:contentDescription="@string/favorite"
             android:clickable="true"
