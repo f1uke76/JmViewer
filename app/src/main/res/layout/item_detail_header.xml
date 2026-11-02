@@ -90,16 +90,11 @@
         android:layout_marginTop="16dp"
         android:orientation="horizontal">
 
-        <ImageView
+        <com.moco.comicsearch.DownloadProgressButton
             android:id="@+id/btnDownload"
             android:layout_width="0dp"
             android:layout_height="46dp"
             android:layout_weight="1"
-            android:padding="12dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/ic_download"
-            android:tint="?attr/colorPrimary"
-            android:background="@drawable/bg_block"
             android:foreground="?attr/selectableItemBackground"
             android:contentDescription="@string/download"
             android:clickable="true"

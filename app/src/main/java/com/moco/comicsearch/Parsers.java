@@ -320,6 +320,39 @@ public final class Parsers {
     /**
      * 用编号搜索时站点会 302 到 /album/{id}/，这里判断拿到的到底是列表页还是详情页。
      */
+    /** 从详情页提取评论（站点结构变化时可能为空）。 */
+    public static List<String> parseComments(String html) {
+        List<String> out = new ArrayList<>();
+        if (html == null || html.isEmpty()) {
+            return out;
+        }
+        try {
+            Document doc = Jsoup.parse(html);
+            Elements items = doc.select(
+                    "#comment_area .comment, #comments .comment, .comment-list .comment,"
+                            + " .comment-item, .comments .comment, .comment");
+            for (Element e : items) {
+                String text = e.text().trim();
+                if (text.length() > 1 && !out.contains(text)) {
+                    out.add(text);
+                }
+            }
+            if (out.isEmpty()) {
+                Element area = doc.selectFirst("#comment_area, #comments, .comments, .comment-area");
+                if (area != null) {
+                    for (Element p : area.select("p, li, .content, .text, .body")) {
+                        String text = p.text().trim();
+                        if (text.length() > 1 && !out.contains(text)) {
+                            out.add(text);
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
     public static boolean isAlbumPage(String html) {
         if (html == null || html.isEmpty()) {
             return false;

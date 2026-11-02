@@ -166,19 +166,12 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
     public void onBindViewHolder(@NonNull VH h, int position) {
         Models.Album a = items.get(position);
         if (h.check != null) {
-            if (selectionMode) {
-                h.check.setVisibility(View.VISIBLE);
-                boolean sel = selectedIds != null && selectedIds.contains(a.id);
-                h.check.setAlpha(sel ? 1f : 0.55f);
-                h.check.setColorFilter(grid
-                        ? 0xFFFFFFFF
-                        : (sel ? ThemeManager.primary(h.itemView.getContext())
-                        : androidx.core.content.ContextCompat.getColor(
-                                h.itemView.getContext(), R.color.muted)));
-            } else {
-                h.check.setVisibility(View.GONE);
-            }
+            h.check.setVisibility(View.GONE);
         }
+        // 选中不再画勾，整块用主题色高亮
+        boolean selected = selectionMode && selectedIds != null && selectedIds.contains(a.id);
+        h.itemView.setBackgroundResource(selected
+                ? R.drawable.bg_block_selected : R.drawable.bg_block);
         h.title.setText(a.title);
 
         if (h.meta != null) {

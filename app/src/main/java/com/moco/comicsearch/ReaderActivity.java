@@ -194,7 +194,8 @@ public class ReaderActivity extends SwipeBackActivity {
     private void refreshFavIcon() {
         fav = store.isFavorite(favKey());
         if (btnFav != null) {
-            btnFav.setImageResource(fav ? R.drawable.ic_star : R.drawable.ic_star_border);
+            btnFav.setImageResource(R.drawable.ic_favorite);
+            btnFav.setColorFilter(fav ? 0xFFFFFFFF : 0x66FFFFFF);
         }
     }
 

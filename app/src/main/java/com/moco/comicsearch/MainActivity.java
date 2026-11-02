@@ -15,8 +15,11 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewAnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -32,6 +35,7 @@ import android.webkit.WebViewClient;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -114,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView emptyTitle;
     private TextView emptyMsg;
     private View historyPanel;
+    private ScrollView historyScroll;
     private LinearLayout historyList;
     private WebView webView;
     private boolean webMode = false;
@@ -268,6 +273,7 @@ public class MainActivity extends AppCompatActivity {
         emptyTitle = findViewById(R.id.emptyTitle);
         emptyMsg = findViewById(R.id.emptyMsg);
         historyPanel = findViewById(R.id.historyPanel);
+        historyScroll = findViewById(R.id.historyScroll);
         historyList = findViewById(R.id.historyList);
         webView = findViewById(R.id.webView);
         setupWebView();
@@ -538,6 +544,17 @@ public class MainActivity extends AppCompatActivity {
         adapter = new AlbumAdapter(loader, newAlbumListener());
         list.setLayoutManager(new LinearLayoutManager(this));
         list.setAdapter(adapter);
+        list.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
+            @Override
+            public boolean onInterceptTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
+                if (selectionMode && e.getAction() == MotionEvent.ACTION_DOWN
+                        && rv.findChildViewUnder(e.getX(), e.getY()) == null) {
+                    exitSelection();
+                    return true;
+                }
+                return false;
+            }
+        });
 
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -706,7 +723,9 @@ public class MainActivity extends AppCompatActivity {
         emptyView.setVisibility(View.GONE);
         homeMark.setVisibility(View.GONE);
         loading.setVisibility(View.GONE);
-        hideSearchHistory();
+        if (!(searchExpanded && which == SEC_HOME)) {
+            hideSearchHistory();
+        }
 
         if (which == SEC_PROFILE) {
             showProfile();
@@ -1516,21 +1535,43 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         historyList.removeAllViews();
-        int limit = Math.min(items.size(), 8);
+        int limit = Math.min(items.size(), 20);
         TypedValue tv = new TypedValue();
         getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
         for (int i = 0; i < limit; i++) {
             final String q = items.get(i);
-            TextView row = new TextView(this);
-            row.setText(q);
-            row.setTextSize(14f);
-            row.setTextColor(ContextCompat.getColor(this, R.color.on_surface));
-            row.setSingleLine(true);
-            row.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            row.setPadding(0, dp(11), 0, dp(11));
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
             if (tv.resourceId != 0) {
                 row.setBackgroundResource(tv.resourceId);
             }
+
+            TextView label = new TextView(this);
+            label.setText(q);
+            label.setTextSize(14f);
+            label.setTextColor(ContextCompat.getColor(this, R.color.on_surface));
+            label.setSingleLine(true);
+            label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            label.setPadding(0, dp(11), 0, dp(11));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            row.addView(label, lp);
+
+            ImageView del = new ImageView(this);
+            del.setImageResource(R.drawable.ic_close);
+            del.setColorFilter(ContextCompat.getColor(this, R.color.muted));
+            del.setPadding(dp(7), dp(7), dp(7), dp(7));
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dp(32), dp(32));
+            dlp.setMarginStart(dp(8));
+            del.setLayoutParams(dlp);
+            del.setContentDescription(getString(R.string.remove));
+            del.setOnClickListener(v -> {
+                prefs.removeHistory(q);
+                showSearchHistory();
+            });
+            row.addView(del);
+
             row.setOnClickListener(v -> {
                 searchInput.setText(q);
                 searchInput.setSelection(q.length());
@@ -1539,6 +1580,11 @@ public class MainActivity extends AppCompatActivity {
             });
             historyList.addView(row);
         }
+        // 最多显示 5 行，超出可上下滚动
+        int rows = Math.min(limit, 5);
+        ViewGroup.LayoutParams slp = historyScroll.getLayoutParams();
+        slp.height = rows * dp(42);
+        historyScroll.setLayoutParams(slp);
         historyPanel.setVisibility(View.VISIBLE);
     }
 
