@@ -18,9 +18,9 @@ import java.util.regex.Pattern;
 public class UpdateChecker {
 
     public static final String API =
-            "https://api.github.com/repos/haowen76/JmViewer/releases/latest";
+            "https://api.github.com/repos/f1uke76/JmViewer/releases/latest";
     public static final String LATEST_PAGE =
-            "https://github.com/haowen76/JmViewer/releases/latest";
+            "https://github.com/f1uke76/JmViewer/releases/latest";
 
     public static class Result {
         public boolean ok;
@@ -29,6 +29,7 @@ public class UpdateChecker {
         public String version = "";
         public String url = "";
         public String notes = "";
+        public String apkUrl = "";
     }
 
     public interface Callback {
@@ -52,11 +53,12 @@ public class UpdateChecker {
 
     public static void check(Context ctx, Callback cb) {
         new Thread(() -> {
-            Result r = fetchApi();
+            // 先走网页（不受 API 限流影响），失败再试 API
+            Result r = fetchHtml();
             if (!r.ok) {
-                Result html = fetchHtml();
-                if (html.ok) {
-                    r = html;
+                Result api = fetchApi();
+                if (api.ok) {
+                    r = api;
                 }
             }
             final Result result = r;
@@ -70,8 +72,8 @@ public class UpdateChecker {
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(API).openConnection();
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(8000);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
             conn.setRequestProperty("User-Agent", "JmViewer/" + BuildConfig.VERSION_NAME);
             conn.setRequestProperty("Accept", "application/vnd.github+json");
             int code = conn.getResponseCode();
@@ -89,6 +91,19 @@ public class UpdateChecker {
                 r.version = trimV(o.optString("tag_name"));
                 r.url = o.optString("html_url");
                 r.notes = o.optString("body");
+                org.json.JSONArray assets = o.optJSONArray("assets");
+                if (assets != null) {
+                    for (int i = 0; i < assets.length(); i++) {
+                        org.json.JSONObject asset = assets.optJSONObject(i);
+                        if (asset == null) {
+                            continue;
+                        }
+                        if (asset.optString("name").endsWith(".apk")) {
+                            r.apkUrl = asset.optString("browser_download_url");
+                            break;
+                        }
+                    }
+                }
                 r.ok = !r.version.isEmpty();
                 r.newer = r.ok && compare(r.version, BuildConfig.VERSION_NAME) > 0;
             }
@@ -108,18 +123,38 @@ public class UpdateChecker {
         try {
             conn = (HttpURLConnection) new URL(LATEST_PAGE).openConnection();
             conn.setInstanceFollowRedirects(true);
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(8000);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
             conn.setRequestProperty("User-Agent",
                     "Mozilla/5.0 (Linux; Android 14) JmViewer/" + BuildConfig.VERSION_NAME);
             r.code = conn.getResponseCode();
             String finalUrl = conn.getURL().toString();
             Matcher m = Pattern.compile("/releases/tag/([^/?#]+)").matcher(finalUrl);
+            if (!m.find()) {
+                // 个别网络下拿不到跳转地址，退回页面内容里找 tag
+                StringBuilder sb = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                        conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    char[] buf = new char[8192];
+                    int n;
+                    int total = 0;
+                    while ((n = br.read(buf)) > 0 && total < 300000) {
+                        sb.append(buf, 0, n);
+                        total += n;
+                    }
+                }
+                m = Pattern.compile("/releases/tag/([^\"'?#]+)").matcher(sb);
+            }
             if (m.find()) {
                 r.version = trimV(m.group(1));
                 r.url = finalUrl;
+                r.apkUrl = "https://github.com/f1uke76/JmViewer/releases/download/v"
+                        + r.version + "/JmViewer-v" + r.version + ".apk";
                 r.ok = !r.version.isEmpty();
                 r.newer = r.ok && compare(r.version, BuildConfig.VERSION_NAME) > 0;
+            }
+            if (r.ok) {
+                r.notes = fetchNotes(r.url);
             }
         } catch (Exception ignored) {
         } finally {
@@ -128,6 +163,41 @@ public class UpdateChecker {
             }
         }
         return r;
+    }
+
+    /** 从 Release 页面提取更新说明。 */
+    private static String fetchNotes(String url) {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+            conn.setRequestProperty("User-Agent",
+                    "Mozilla/5.0 (Linux; Android 14) JmViewer/" + BuildConfig.VERSION_NAME);
+            if (conn.getResponseCode() != 200) {
+                return "";
+            }
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                    conn.getInputStream(), StandardCharsets.UTF_8))) {
+                char[] buf = new char[8192];
+                int n;
+                int total = 0;
+                while ((n = br.read(buf)) > 0 && total < 400000) {
+                    sb.append(buf, 0, n);
+                    total += n;
+                }
+            }
+            org.jsoup.nodes.Document doc = org.jsoup.Jsoup.parse(sb.toString());
+            org.jsoup.nodes.Element body = doc.selectFirst(".markdown-body");
+            return body == null ? "" : body.text().trim();
+        } catch (Exception e) {
+            return "";
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
     }
 
     public static String trimV(String v) {

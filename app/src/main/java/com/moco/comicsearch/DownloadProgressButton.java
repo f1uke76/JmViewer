@@ -19,6 +19,7 @@ public class DownloadProgressButton extends View {
     private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path downloadPath = new Path();
     private final Path checkPath = new Path();
     private final PathMeasure checkMeasure = new PathMeasure();
@@ -30,6 +31,7 @@ public class DownloadProgressButton extends View {
     private float iconScale = 1f;
     private ValueAnimator animator;
     private ValueAnimator morphAnimator;
+    private ValueAnimator progressAnimator;
 
     public DownloadProgressButton(Context context) {
         this(context, null);
@@ -41,9 +43,12 @@ public class DownloadProgressButton extends View {
         bgPaint.setColor(ContextCompat.getColor(context, R.color.surface2));
         fillPaint.setColor(primary);
         linePaint.setStyle(Paint.Style.STROKE);
-        linePaint.setStrokeCap(Paint.Cap.ROUND);
-        linePaint.setStrokeJoin(Paint.Join.ROUND);
+        linePaint.setStrokeCap(Paint.Cap.BUTT);
+        linePaint.setStrokeJoin(Paint.Join.MITER);
         linePaint.setColor(Color.WHITE);
+        borderPaint.setStyle(Paint.Style.STROKE);
+        borderPaint.setStrokeWidth(getResources().getDisplayMetrics().density);
+        borderPaint.setColor(ContextCompat.getColor(context, R.color.divider));
         buildPaths();
     }
 
@@ -67,12 +72,25 @@ public class DownloadProgressButton extends View {
     }
 
     public void setProgress(int value) {
-        progress = Math.max(0, Math.min(100, value));
-        if (progress > 0) {
-            downloaded = false;
-            morph = 0f;
+        final int target = Math.max(0, Math.min(100, value));
+        if (downloaded) {
+            return;
         }
-        invalidate();
+        if (progressAnimator != null) {
+            progressAnimator.cancel();
+        }
+        if (progress == target) {
+            return;
+        }
+        progressAnimator = ValueAnimator.ofInt(progress, target);
+        progressAnimator.setDuration(250);
+        progressAnimator.setInterpolator(new DecelerateInterpolator());
+        progressAnimator.addUpdateListener(a -> {
+            progress = (int) a.getAnimatedValue();
+            invalidate();
+        });
+        progressAnimator.start();
+        morph = 0f;
     }
 
     public void setDownloaded(boolean value) {
@@ -86,6 +104,9 @@ public class DownloadProgressButton extends View {
 
     /** 完成时先把进度补到 100，再让下载线条过渡成打勾。 */
     public void animateToDone(final Runnable end) {
+        if (progressAnimator != null) {
+            progressAnimator.cancel();
+        }
         if (animator != null) {
             animator.cancel();
         }
@@ -144,12 +165,16 @@ public class DownloadProgressButton extends View {
         if (fillW > 0) {
             canvas.drawRect(0, 0, fillW, h, fillPaint);
         }
+        if (!downloaded) {
+            float half = borderPaint.getStrokeWidth() / 2f;
+            canvas.drawRect(half, half, w - half, h - half, borderPaint);
+        }
 
         int size = (int) (Math.min(w, h) * 0.5f * iconScale);
         float left = (w - size) / 2f;
         float top = (h - size) / 2f;
         float scale = size / 24f;
-        linePaint.setStrokeWidth(2f * scale);
+        linePaint.setStrokeWidth((morph > 0f ? 2.4f : 2f) * scale);
 
         canvas.save();
         canvas.translate(left, top);
@@ -183,6 +208,9 @@ public class DownloadProgressButton extends View {
         }
         if (morphAnimator != null) {
             morphAnimator.cancel();
+        }
+        if (progressAnimator != null) {
+            progressAnimator.cancel();
         }
         super.onDetachedFromWindow();
     }

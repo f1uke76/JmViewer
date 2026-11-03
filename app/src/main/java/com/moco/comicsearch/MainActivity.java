@@ -555,7 +555,9 @@ public class MainActivity extends AppCompatActivity {
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(RecyclerView rv, int dx, int dy) {
-                if (historyPanel != null && historyPanel.getVisibility() == View.VISIBLE) {
+                if (historyPanel != null && historyPanel.getVisibility() == View.VISIBLE
+                        && rv.getScrollState() == RecyclerView.SCROLL_STATE_DRAGGING) {
+                    // 只在用户手动拖动列表时收起，避免推荐流自动布局把记录框顶掉
                     hideSearchHistory();
                 }
                 if (section != SEC_HOME || noMore || requesting || dy <= 0 || keyword.isEmpty()) {
@@ -630,9 +632,13 @@ public class MainActivity extends AppCompatActivity {
             public void onLongClick(Models.Album album) {
                 if (selectionMode) {
                     toggleSelection(album);
-                } else {
-                    enterSelection(album);
+                    return;
                 }
+                // 主页推荐不支持多选
+                if (section == SEC_HOME) {
+                    return;
+                }
+                enterSelection(album);
             }
 
             @Override
@@ -978,7 +984,8 @@ public class MainActivity extends AppCompatActivity {
         if (album == null || album.id == null || album.id.isEmpty()) {
             return;
         }
-        if (section == SEC_PROFILE) {
+        // 主页推荐/搜索结果不支持多选与删除，只有历史、收藏、下载支持
+        if (section == SEC_PROFILE || section == SEC_HOME || section == SEC_SETTINGS) {
             return;
         }
         selectionMode = true;

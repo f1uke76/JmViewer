@@ -5,7 +5,13 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Paint;
 import android.os.Bundle;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -40,6 +47,22 @@ public class DetailActivity extends SwipeBackActivity {
 
     private TextView barTitle;
     private DetailAdapter adapter;
+
+    // 评论面板
+    private View commentsPanel;
+    private LinearLayout commentItems;
+    private TextView commentsLoading;
+    private TextView commentsEmpty;
+    private TextView btnMoreComments;
+    private final List<String> comments = new ArrayList<>();
+    private boolean commentsOpen;
+    private boolean commentsLoaded;
+    private boolean commentsLoadingFlag;
+    private int commentShown;
+    private float touchDownX;
+    private float touchDownY;
+    private boolean touchTracking;
+    private static final int COMMENT_PAGE = 10;
     private final AtomicBoolean prefetchCancel = new AtomicBoolean(false);
     private boolean downloadNotified;
     private final DownloadManager.Listener dlListener = () -> {
@@ -135,33 +158,7 @@ public class DetailActivity extends SwipeBackActivity {
         contentView.setLayoutManager(glm);
         contentView.setAdapter(adapter);
         DownloadManager.get(this).addListener(dlListener);
-
-        final android.view.GestureDetector gd = new android.view.GestureDetector(this,
-                new android.view.GestureDetector.SimpleOnGestureListener() {
-                    @Override
-                    public boolean onFling(android.view.MotionEvent e1, android.view.MotionEvent e2,
-                                           float vx, float vy) {
-                        if (e1 == null || e2 == null) {
-                            return false;
-                        }
-                        float dx = e2.getX() - e1.getX();
-                        float dy = Math.abs(e2.getY() - e1.getY());
-                        if (dx > 120 && dx > dy) {
-                            startActivity(new Intent(DetailActivity.this, CommentsActivity.class)
-                                    .putExtra("id", albumId));
-                            return true;
-                        }
-                        return false;
-                    }
-                });
-        contentView.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
-            @Override
-            public boolean onInterceptTouchEvent(@NonNull RecyclerView rv,
-                                                 android.view.MotionEvent e) {
-                gd.onTouchEvent(e);
-                return false;
-            }
-        });
+        setupComments();
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 
@@ -407,6 +404,169 @@ public class DetailActivity extends SwipeBackActivity {
         i.putExtra("index", 0);
         i.putExtra("page", startPage);
         startActivity(i);
+    }
+
+    // ------------------------------------------------------------ 评论
+
+    private void setupComments() {
+        commentsPanel = findViewById(R.id.commentsPanel);
+        commentItems = findViewById(R.id.commentItems);
+        commentsLoading = findViewById(R.id.commentsLoading);
+        commentsEmpty = findViewById(R.id.commentsEmpty);
+        btnMoreComments = findViewById(R.id.btnMoreComments);
+        btnMoreComments.setPaintFlags(btnMoreComments.getPaintFlags()
+                | Paint.UNDERLINE_TEXT_FLAG);
+        btnMoreComments.setOnClickListener(v -> renderComments());
+        findViewById(R.id.btnCommentsClose).setOnClickListener(v -> closeComments());
+    }
+
+    /** 预览图区域右滑进入评论，左滑返回预览。 */
+    private void openComments() {
+        if (commentsOpen) {
+            return;
+        }
+        commentsOpen = true;
+        commentsPanel.setVisibility(View.VISIBLE);
+        int w = commentsPanel.getWidth() > 0
+                ? commentsPanel.getWidth()
+                : getResources().getDisplayMetrics().widthPixels;
+        commentsPanel.setTranslationX(w);
+        commentsPanel.animate().translationX(0f)
+                .setDuration(240)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+        if (!commentsLoaded && !commentsLoadingFlag) {
+            loadComments();
+        }
+    }
+
+    private void closeComments() {
+        if (!commentsOpen) {
+            return;
+        }
+        commentsOpen = false;
+        int w = commentsPanel.getWidth() > 0
+                ? commentsPanel.getWidth()
+                : getResources().getDisplayMetrics().widthPixels;
+        commentsPanel.animate().translationX(w)
+                .setDuration(200)
+                .setInterpolator(new AccelerateInterpolator())
+                .withEndAction(() -> {
+                    if (!commentsOpen) {
+                        commentsPanel.setVisibility(View.GONE);
+                    }
+                })
+                .start();
+    }
+
+    /** 从作品详情页的评论区读取评论。 */
+    private void loadComments() {
+        commentsLoadingFlag = true;
+        commentsLoading.setVisibility(View.VISIBLE);
+        final String id = albumId;
+        pool.execute(() -> {
+            List<String> result = new ArrayList<>();
+            try {
+                String html = site.get("/album/" + id);
+                result = Parsers.parseComments(html);
+            } catch (Exception ignored) {
+            }
+            final List<String> parsed = result;
+            runOnUiThread(() -> {
+                commentsLoadingFlag = false;
+                commentsLoaded = true;
+                commentsLoading.setVisibility(View.GONE);
+                comments.clear();
+                comments.addAll(parsed);
+                commentShown = 0;
+                commentItems.removeAllViews();
+                renderComments();
+            });
+        });
+    }
+
+    /** 每次追加 10 条，未显示完时保留「显示更多评论」。 */
+    private void renderComments() {
+        if (comments.isEmpty()) {
+            commentsEmpty.setVisibility(View.VISIBLE);
+            btnMoreComments.setVisibility(View.GONE);
+            return;
+        }
+        commentsEmpty.setVisibility(View.GONE);
+        int target = Math.min(commentShown + COMMENT_PAGE, comments.size());
+        for (int i = commentShown; i < target; i++) {
+            commentItems.addView(commentView(comments.get(i)));
+        }
+        commentShown = target;
+        btnMoreComments.setVisibility(commentShown < comments.size()
+                ? View.VISIBLE : View.GONE);
+    }
+
+    private TextView commentView(String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(14f);
+        tv.setTextColor(getColor(R.color.on_surface));
+        tv.setLineSpacing(dp(4), 1f);
+        int pad = dp(12);
+        tv.setPadding(pad, pad, pad, pad);
+        tv.setBackgroundResource(R.drawable.bg_block);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(8);
+        tv.setLayoutParams(lp);
+        return tv;
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        switch (ev.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                touchDownX = ev.getX();
+                touchDownY = ev.getY();
+                touchTracking = true;
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if (touchTracking) {
+                    float dx = ev.getX() - touchDownX;
+                    float dy = ev.getY() - touchDownY;
+                    if (Math.abs(dx) > dp(70) && Math.abs(dx) > Math.abs(dy) * 1.6f) {
+                        touchTracking = false;
+                        if (dx < 0 && commentsOpen) {
+                            closeComments();
+                            return true;
+                        }
+                        if (dx > 0 && !commentsOpen) {
+                            openComments();
+                            return true;
+                        }
+                    }
+                }
+                break;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                touchTracking = false;
+                break;
+            default:
+                break;
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    /** 详情页的左右滑用于切换预览 / 评论，关闭全局右滑返回，避免手势冲突。 */
+    @Override
+    protected boolean shouldHandleSwipeBack(MotionEvent ev) {
+        return false;
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (commentsOpen) {
+            closeComments();
+            return;
+        }
+        super.onBackPressed();
     }
 
     // ------------------------------------------------------------ 下载

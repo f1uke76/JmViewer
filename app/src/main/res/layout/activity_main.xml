@@ -175,7 +175,8 @@
                     android:layout_marginEnd="12dp"
                     android:layout_marginBottom="6dp"
                     android:orientation="vertical"
-                    android:background="@drawable/bg_block"
+                    android:background="@drawable/bg_history_panel"
+                    android:elevation="6dp"
                     android:paddingStart="14dp"
                     android:paddingEnd="14dp"
                     android:paddingTop="8dp"
@@ -281,7 +282,6 @@
                 android:layout_gravity="bottom|end"
                 android:layout_marginEnd="16dp"
                 android:layout_marginBottom="16dp"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
                 android:padding="16dp"
                 android:src="@drawable/ic_search"
                 android:tint="@color/white"
@@ -308,14 +308,12 @@
                     android:layout_width="60dp"
                     android:layout_height="60dp"
                     android:layout_marginBottom="12dp"
-                    android:foreground="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/select_all"
                     android:clickable="true"
                     android:focusable="true" />
 
                 <ImageView
                     android:id="@+id/btnSelExport"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
                     android:layout_width="60dp"
                     android:layout_height="60dp"
                     android:layout_marginBottom="12dp"
@@ -329,7 +327,6 @@
 
                 <ImageView
                     android:id="@+id/btnSelStart"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
                     android:layout_width="60dp"
                     android:layout_height="60dp"
                     android:layout_marginBottom="12dp"
@@ -343,7 +340,6 @@
 
                 <ImageView
                     android:id="@+id/btnSelPause"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
                     android:layout_width="60dp"
                     android:layout_height="60dp"
                     android:layout_marginBottom="12dp"
@@ -357,7 +353,6 @@
 
                 <ImageView
                     android:id="@+id/btnSelDelete"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
                     android:layout_width="60dp"
                     android:layout_height="60dp"
                     android:padding="16dp"

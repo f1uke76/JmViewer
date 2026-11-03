@@ -115,8 +115,8 @@ public class CacheActivity extends SwipeBackActivity {
                 Ui.toast(CacheActivity.this, CacheActivity.this.getString(R.string.download_start));
             }
         });
-        adapter.setShowTrash(true);
-        adapter.setShowDownload(true);
+        adapter.setShowTrash(false);
+        adapter.setShowDownload(false);
         adapter.setGrid(grid);
         list.setAdapter(adapter);
 
@@ -189,7 +189,10 @@ public class CacheActivity extends SwipeBackActivity {
                 a.title = aid;
             }
             a.readId = aid;
-            a.extra = String.format(Locale.ROOT, "%.1f MB", e.getValue() / 1024f / 1024f);
+            a.extra = "";
+            // 大小作为标签展示，meta 与收藏页保持一致（页数 · 代号）
+            a.tags.removeIf(t -> t != null && t.endsWith(" MB"));
+            a.tags.add(String.format(Locale.ROOT, "%.1f MB", e.getValue() / 1024f / 1024f));
             sizes.put(aid, e.getValue());
             idToAid.put(a.id, aid);
             out.add(a);

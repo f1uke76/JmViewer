@@ -102,7 +102,12 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
                     Models.Album nw = next.get(i);
                     if (changed(old, nw)) {
                         items.set(i, nw);
-                        notifyItemChanged(i);
+                        if (sameExceptProgress(old, nw)) {
+                            // 只有进度变化时原地刷新，避免整条重绑导致封面闪烁
+                            updateProgressView(i, nw);
+                        } else {
+                            notifyItemChanged(i);
+                        }
                     }
                 }
                 return;
@@ -111,6 +116,67 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         items.clear();
         items.addAll(next);
         notifyDataSetChanged();
+    }
+
+    private static boolean sameExceptProgress(Models.Album a, Models.Album b) {
+        return a.downloadState == b.downloadState
+                && a.title.equals(b.title)
+                && a.cover.equals(b.cover)
+                && a.pages.equals(b.pages)
+                && a.tags.equals(b.tags);
+    }
+
+    private RecyclerView recycler;
+
+    @Override
+    public void onAttachedToRecyclerView(@NonNull RecyclerView rv) {
+        super.onAttachedToRecyclerView(rv);
+        recycler = rv;
+    }
+
+    private void updateProgressView(int position, Models.Album a) {
+        if (recycler == null) {
+            return;
+        }
+        RecyclerView.ViewHolder holder = recycler.findViewHolderForAdapterPosition(position);
+        if (!(holder instanceof VH)) {
+            return;
+        }
+        VH h = (VH) holder;
+        boolean showProgress = a.progress >= 0 && (a.downloadState == 1 || a.downloadState == 2);
+        if (h.downloadRow != null) {
+            h.downloadRow.setVisibility(showProgress ? View.VISIBLE : View.GONE);
+        }
+        if (h.downloadProgress != null && showProgress) {
+            h.downloadProgress.setProgress(a.progress);
+        }
+        if (h.tags != null) {
+            h.tags.setVisibility(showProgress ? View.GONE : View.VISIBLE);
+        }
+        if (h.btnDownload != null) {
+            h.btnDownload.setVisibility(showProgress ? View.VISIBLE : View.GONE);
+            h.btnDownload.setImageResource(a.downloadState == 2
+                    ? R.drawable.ic_play : R.drawable.ic_pause);
+        }
+        if (h.meta != null) {
+            StringBuilder meta = new StringBuilder();
+            if (!a.pages.isEmpty()) {
+                meta.append(a.pages).append('p');
+            }
+            if (!a.id.isEmpty()) {
+                if (meta.length() > 0) {
+                    meta.append(" · ");
+                }
+                meta.append(a.id);
+            }
+            if (!a.extra.isEmpty()) {
+                if (meta.length() > 0) {
+                    meta.append(" · ");
+                }
+                meta.append(a.extra);
+            }
+            h.meta.setText(meta);
+        }
     }
 
     private static boolean changed(Models.Album a, Models.Album b) {
@@ -169,11 +235,16 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         if (h.check != null) {
             h.check.setVisibility(View.GONE);
         }
-        // 选中不再画勾，整块用主题色高亮
+        // 选中不再画勾，整块用主题色实心高亮（无描边）
         boolean selected = selectionMode && selectedIds != null && selectedIds.contains(a.id);
         h.itemView.setBackgroundResource(selected
                 ? R.drawable.bg_block_selected : R.drawable.bg_block);
         h.title.setText(a.title);
+        // 主题色底上用白字，保证可读
+        h.title.setTextColor(selected ? 0xFFFFFFFF : h.itemView.getContext().getColor(R.color.on_surface));
+        if (h.meta != null) {
+            h.meta.setTextColor(selected ? 0xD9FFFFFF : h.itemView.getContext().getColor(R.color.muted));
+        }
 
         if (h.meta != null) {
             // 统一小字：多少 P + 作品代号（1464578），可选附加信息
@@ -207,7 +278,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
                     if (shown >= 3) {
                         break;
                     }
-                    h.tags.addView(chip(h.tags, tag));
+                    h.tags.addView(chip(h.tags, tag, selected));
                     shown++;
                 }
             }
@@ -288,12 +359,18 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         return Math.round(v.getResources().getDisplayMetrics().density * value);
     }
 
-    private TextView chip(ViewGroup parent, String text) {
+    private TextView chip(ViewGroup parent, String text, boolean onPrimary) {
         TextView tv = new TextView(parent.getContext());
         tv.setText(text);
         tv.setTextSize(10);
-        tv.setTextColor(parent.getContext().getColor(R.color.muted));
-        tv.setBackgroundResource(R.drawable.bg_chip);
+        tv.setTextColor(onPrimary ? 0xE6FFFFFF
+                : parent.getContext().getColor(R.color.muted));
+        if (onPrimary) {
+            // 选中态：透明底 + 半透明白描边，避免浅色 chip 压在主题色上
+            tv.setBackgroundResource(R.drawable.bg_chip_on_primary);
+        } else {
+            tv.setBackgroundResource(R.drawable.bg_chip);
+        }
         int px = (int) (6 * parent.getResources().getDisplayMetrics().density);
         int py = (int) (2 * parent.getResources().getDisplayMetrics().density);
         tv.setPadding(px, py, px, py);

@@ -182,7 +182,7 @@ public class SettingsPanel {
         input.setSelection(input.getText() == null ? 0 : input.getText().length());
         content.findViewById(R.id.cbAdBlock).setVisibility(View.GONE);
         content.findViewById(R.id.btnClearHistory).setVisibility(View.GONE);
-        content.findViewById(R.id.swWebMode).setVisibility(View.GONE);
+        content.findViewById(R.id.rowWebMode).setVisibility(View.GONE);
         content.findViewById(R.id.btnMirrorDrop).setVisibility(View.GONE);
 
         new MaterialAlertDialogBuilder(activity)
