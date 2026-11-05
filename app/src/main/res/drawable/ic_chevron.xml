@@ -6,7 +6,6 @@
     android:viewportHeight="24"
     android:tint="@color/divider">
     <path
-        android:pathData="M8.5,5 L15.5,12 L8.5,19"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
 </vector>

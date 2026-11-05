@@ -5,18 +5,7 @@
     android:viewportWidth="24"
     android:viewportHeight="24"
     android:tint="?attr/colorPrimary">
-    <group
-        android:pivotX="12"
-        android:pivotY="11"
-        android:scaleX="1.25"
-        android:scaleY="1.25"
-        android:translateX="0"
-        android:translateY="1">
     <path
-        android:pathData="M11,3H13V11.2L16.6,7.6L18,9L12,15L6,9L7.4,7.6L11,11.2Z"
-        android:fillColor="#FFFFFF" />
-    <path
-        android:pathData="M5,17H19V19H5Z"
-        android:fillColor="#FFFFFF" />
-    </group>
+        android:fillColor="#FFFFFF"
+        android:pathData="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
 </vector>

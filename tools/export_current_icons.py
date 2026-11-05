@@ -10,6 +10,7 @@ DRAWABLE = "app/src/main/res/drawable"
 OUT_HTML = "E:/Workbuddy AI/manga tools/.icon_current.html"
 OUT_PNG = "E:/Workbuddy AI/manga tools/icon_current.png"
 EDGE = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+INK = "#1A1A1A"
 
 LABELS = {
     "ic_menu": "菜单", "ic_close": "关闭", "ic_search": "搜索",
@@ -65,6 +66,11 @@ def _path_el(p, colors, tint, indent):
             fill = tint
         if stroke and stroke.upper() in ("#FFFFFF", "#FFFFFFFF"):
             stroke = tint
+    # 预览统一用中性墨色，不带任何主题色 / 底色
+    if fill:
+        fill = INK
+    if stroke:
+        stroke = INK
 
     attrs = ['d="%s"' % re.sub(r"\s+", " ", d).strip()]
     attrs.append('fill="%s"' % (fill if fill else "none"))
@@ -108,13 +114,7 @@ def convert(path, colors):
     vw = root.get("{http://schemas.android.com/apk/res/android}viewportWidth", "24")
     vh = root.get("{http://schemas.android.com/apk/res/android}viewportHeight", "24")
     body = "\n".join(_walk(root, colors, tint, "    "))
-    white = bool(tint and tint.upper() in ("#FFFFFF", "#FFFFFFFF"))
-    if not white:
-        fills = re.findall(r'fill="([^"]+)"', body)
-        strokes = re.findall(r'stroke="([^"]+)"', body)
-        used = [c.upper() for c in fills + strokes if c != "none"]
-        white = bool(used) and all(c in ("#FFFFFF", "#FFFFFFFF") for c in used)
-    return vw, vh, body, white
+    return vw, vh, body, False
 
 
 def main():
@@ -143,8 +143,8 @@ h1{font-size:30px;font-weight:700;margin:0 0 10px}
 .name{font-size:14px;color:#1a1a1a;margin-top:8px}
 .file{font-size:11px;color:#9a9a9a;margin-top:2px}
 </style></head><body><div class="wrap">
-<h1>图标统一后（24dp 画布）</h1>
-<div class="sub">线条类统一 2dp 描边 · 长边统一 20dp · 下拉小箭头 14dp · 导出箭头已合并成尖角</div>
+<h1>图标（Material Icons · Filled 整套替换）</h1>
+<div class="sub">同一套 24dp 网格与笔画规范 · 预览统一中性墨色、无底色 · 全选/全不选 = done_all</div>
 <div class="grid">%s</div></div></body></html>""" % "\n".join(cells)
 
     with open(OUT_HTML, "w", encoding="utf-8") as fh:
