@@ -5,25 +5,24 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
-import android.graphics.PathMeasure;
+import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
 import androidx.core.content.ContextCompat;
 
-/** 详情页下载按钮：主题色从左向右填充，完成后线条从下载图标过渡为打勾。 */
+/** 详情页下载按钮：主题色从左向右填充，完成后图标从下载切换为打勾。 */
 public class DownloadProgressButton extends View {
 
     private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Path downloadPath = new Path();
-    private final Path checkPath = new Path();
-    private final PathMeasure checkMeasure = new PathMeasure();
-    private final int primary;
+
+    private final Drawable iconIdle;   // 未填充区域：主题色
+    private final Drawable iconOnFill; // 已填充区域：白色
+    private final Drawable iconCheck;  // 完成态：白色打勾
 
     private int progress;
     private boolean downloaded;
@@ -39,36 +38,26 @@ public class DownloadProgressButton extends View {
 
     public DownloadProgressButton(Context context, AttributeSet attrs) {
         super(context, attrs);
-        primary = ThemeManager.primary(context);
+        int primary = ThemeManager.primary(context);
         bgPaint.setColor(ContextCompat.getColor(context, R.color.surface2));
         fillPaint.setColor(primary);
-        linePaint.setStyle(Paint.Style.STROKE);
-        linePaint.setStrokeCap(Paint.Cap.BUTT);
-        linePaint.setStrokeJoin(Paint.Join.MITER);
-        linePaint.setColor(Color.WHITE);
         borderPaint.setStyle(Paint.Style.STROKE);
         borderPaint.setStrokeWidth(getResources().getDisplayMetrics().density);
         borderPaint.setColor(ContextCompat.getColor(context, R.color.divider));
-        buildPaths();
+
+        iconIdle = tinted(context, R.drawable.ic_download, primary);
+        iconOnFill = tinted(context, R.drawable.ic_download, Color.WHITE);
+        iconCheck = tinted(context, R.drawable.ic_check, Color.WHITE);
     }
 
-    private void buildPaths() {
-        downloadPath.reset();
-        downloadPath.moveTo(12, 4);
-        downloadPath.lineTo(12, 15);
-        downloadPath.moveTo(7.5f, 10.5f);
-        downloadPath.lineTo(12, 15);
-        downloadPath.lineTo(16.5f, 10.5f);
-        downloadPath.moveTo(5, 16.5f);
-        downloadPath.lineTo(5, 19.5f);
-        downloadPath.lineTo(19, 19.5f);
-        downloadPath.lineTo(19, 16.5f);
-
-        checkPath.reset();
-        checkPath.moveTo(5, 12.5f);
-        checkPath.lineTo(9.5f, 17);
-        checkPath.lineTo(19, 7);
-        checkMeasure.setPath(checkPath, false);
+    private static Drawable tinted(Context ctx, int res, int color) {
+        Drawable d = ContextCompat.getDrawable(ctx, res);
+        if (d == null) {
+            return null;
+        }
+        d = d.mutate();
+        d.setTint(color);
+        return d;
     }
 
     public void setProgress(int value) {
@@ -102,7 +91,7 @@ public class DownloadProgressButton extends View {
         invalidate();
     }
 
-    /** 完成时先把进度补到 100，再让下载线条过渡成打勾。 */
+    /** 完成时先把进度补到 100，再把下载图标过渡成打勾。 */
     public void animateToDone(final Runnable end) {
         if (progressAnimator != null) {
             progressAnimator.cancel();
@@ -171,34 +160,36 @@ public class DownloadProgressButton extends View {
         }
 
         int size = (int) (Math.min(w, h) * 0.5f * iconScale);
-        float left = (w - size) / 2f;
-        float top = (h - size) / 2f;
-        float scale = size / 24f;
-        linePaint.setStrokeWidth((morph > 0f ? 2.4f : 2f) * scale);
+        int left = (w - size) / 2;
+        int top = (h - size) / 2;
+        Rect bounds = new Rect(left, top, left + size, top + size);
 
-        canvas.save();
-        canvas.translate(left, top);
-        canvas.scale(scale, scale);
+        // 下载图标：被填充覆盖的部分白色，其余主题色
+        if (morph < 1f && iconIdle != null && iconOnFill != null) {
+            int alpha = (int) (255 * (1f - morph));
+            iconOnFill.setAlpha(alpha);
+            iconIdle.setAlpha(alpha);
+            iconOnFill.setBounds(bounds);
+            iconIdle.setBounds(bounds);
+            canvas.save();
+            canvas.clipRect(0, 0, fillW, h);
+            iconOnFill.draw(canvas);
+            canvas.restore();
+            canvas.save();
+            canvas.clipRect(fillW, 0, w, h);
+            iconIdle.draw(canvas);
+            canvas.restore();
+        }
 
-        if (morph < 1f) {
-            linePaint.setAlpha((int) (255 * (1f - morph)));
-            linePaint.setColor(progress == 0 ? primary : Color.WHITE);
-            canvas.drawPath(downloadPath, linePaint);
+        // 完成勾：从左往右揭开
+        if (morph > 0f && iconCheck != null) {
+            iconCheck.setAlpha(255);
+            iconCheck.setBounds(bounds);
+            canvas.save();
+            canvas.clipRect(0, 0, left + size * Math.min(1f, morph), h);
+            iconCheck.draw(canvas);
+            canvas.restore();
         }
-        if (morph > 0f) {
-            linePaint.setAlpha(255);
-            linePaint.setColor(Color.WHITE);
-            float len = checkMeasure.getLength();
-            float part = Math.max(0f, Math.min(1f, morph));
-            if (part >= 1f) {
-                canvas.drawPath(checkPath, linePaint);
-            } else {
-                Path dst = new Path();
-                checkMeasure.getSegment(0, len * part, dst, true);
-                canvas.drawPath(dst, linePaint);
-            }
-        }
-        canvas.restore();
     }
 
     @Override

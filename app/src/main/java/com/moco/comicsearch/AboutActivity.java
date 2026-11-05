@@ -64,10 +64,12 @@ public class AboutActivity extends SwipeBackActivity {
     }
 
     private int checkSeq;
+    private boolean checkPending;
 
     private void checkUpdate(boolean manual) {
         final int seq = ++checkSeq;
         if (manual) {
+            checkPending = true;
             Ui.toast(this, getString(R.string.checking_update));
         }
         final boolean isManual = manual;
@@ -75,6 +77,7 @@ public class AboutActivity extends SwipeBackActivity {
             if (seq != checkSeq) {
                 return;
             }
+            checkPending = false;
             versionDot.setVisibility(UpdateChecker.hasUpdate() ? View.VISIBLE : View.GONE);
             if (r == null || !r.ok) {
                 if (isManual) {
@@ -95,7 +98,9 @@ public class AboutActivity extends SwipeBackActivity {
         if (manual) {
             // 兜底：30 秒仍未返回就提示失败，避免看起来没反应
             new android.os.Handler(getMainLooper()).postDelayed(() -> {
-                if (seq == checkSeq) {
+                // 只有确实还没返回才提示失败，避免成功后又被兜底逻辑误报
+                if (checkPending && seq == checkSeq) {
+                    checkPending = false;
                     checkSeq++;
                     Ui.toast(this, getString(R.string.check_update_failed));
                 }
