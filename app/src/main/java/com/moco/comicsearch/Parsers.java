@@ -320,57 +320,6 @@ public final class Parsers {
     /**
      * 用编号搜索时站点会 302 到 /album/{id}/，这里判断拿到的到底是列表页还是详情页。
      */
-    /**
-     * 从作品详情页的评论区提取评论内容。
-     * 优先找评论区容器，再取每条评论的正文节点；结构变化时退化为整块文本。
-     */
-    public static List<String> parseComments(String html) {
-        List<String> out = new ArrayList<>();
-        if (html == null || html.isEmpty()) {
-            return out;
-        }
-        try {
-            Document doc = Jsoup.parse(html);
-            Element area = doc.selectFirst("#comment_area, #comments, .comment-area,"
-                    + " .comment-list, .comments");
-            Elements blocks = area == null ? new Elements()
-                    : area.select(".comment-item, .comment, li");
-            if (blocks.isEmpty()) {
-                blocks = doc.select("#comment_area .comment-item, .comment-item,"
-                        + " .comment-list .comment, .comments .comment");
-            }
-            for (Element e : blocks) {
-                String text = commentText(e);
-                if (isUsefulComment(text) && !out.contains(text)) {
-                    out.add(text);
-                }
-            }
-            if (out.isEmpty() && area != null) {
-                for (Element p : area.select("p, .content, .text, .body")) {
-                    String text = p.text().trim();
-                    if (isUsefulComment(text) && !out.contains(text)) {
-                        out.add(text);
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return out;
-    }
-
-    private static String commentText(Element e) {
-        Element body = e.selectFirst(".comment-content, .content, .text, .body, p");
-        String text = body == null ? e.text() : body.text();
-        return text == null ? "" : text.replaceAll("\\s+", " ").trim();
-    }
-
-    private static boolean isUsefulComment(String text) {
-        if (text == null || text.length() < 2) {
-            return false;
-        }
-        return !"评论".equals(text) && !"发表评论".equals(text) && !"暂无评论".equals(text);
-    }
-
     public static boolean isAlbumPage(String html) {
         if (html == null || html.isEmpty()) {
             return false;
