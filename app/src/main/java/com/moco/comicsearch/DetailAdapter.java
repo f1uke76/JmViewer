@@ -148,31 +148,34 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             h.tags.addView(chip(h.tags, tag));
         }
 
-        h.cover.setImageBitmap(null);
-        h.cover.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        h.cover.setImageResource(R.drawable.ic_logo);
+        // 同一张封面不重复设置：已有缓存就直接显示，避免刷新时闪一下
         final String url = a.cover;
-        h.cover.setTag(url);
-        if (!url.isEmpty()) {
-            loader.loadCover(url, new ImageLoader.Callback() {
-                private boolean retried;
+        if (!url.equals(h.boundCoverUrl)) {
+            h.boundCoverUrl = url;
+            h.cover.setTag(url);
+            h.cover.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            h.cover.setImageDrawable(h.mark);
+            if (!url.isEmpty()) {
+                loader.loadCover(url, new ImageLoader.Callback() {
+                    private boolean retried;
 
-                @Override
-                public void onLoaded(Bitmap bitmap) {
-                    if (url.equals(h.cover.getTag())) {
-                        h.cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                        h.cover.setImageBitmap(bitmap);
+                    @Override
+                    public void onLoaded(Bitmap bitmap) {
+                        if (url.equals(h.cover.getTag())) {
+                            h.cover.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                            h.cover.setImageBitmap(bitmap);
+                        }
                     }
-                }
 
-                @Override
-                public void onError(Exception e) {
-                    if (!retried) {
-                        retried = true;
-                        h.cover.postDelayed(() -> loader.loadCover(url, this), 600);
+                    @Override
+                    public void onError(Exception e) {
+                        if (!retried) {
+                            retried = true;
+                            h.cover.postDelayed(() -> loader.loadCover(url, this), 600);
+                        }
                     }
-                }
-            });
+                });
+            }
         }
 
         h.btnFav.setCircle(false);
@@ -255,6 +258,8 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
     static class HeaderVH extends RecyclerView.ViewHolder {
         ImageView cover;
+        final JmMarkDrawable mark;
+        String boundCoverUrl = "\u0000";
         TextView title;
         TextView author;
         TextView meta;
@@ -267,6 +272,7 @@ public class DetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         HeaderVH(View v) {
             super(v);
             cover = v.findViewById(R.id.cover);
+            mark = new JmMarkDrawable(v.getContext().getColor(R.color.muted));
             title = v.findViewById(R.id.title);
             author = v.findViewById(R.id.author);
             meta = v.findViewById(R.id.meta);

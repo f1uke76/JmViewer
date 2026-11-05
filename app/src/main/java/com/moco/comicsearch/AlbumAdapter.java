@@ -292,22 +292,26 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             h.cover.setLayoutParams(lp);
         }
 
-        h.cover.setImageBitmap(null);
+        // 同一张封面不重复设置，避免刷新时先清空再加载造成闪烁
         final String coverUrl = a.cover;
-        h.cover.setTag(coverUrl);
-        if (!coverUrl.isEmpty()) {
-            loader.loadCover(coverUrl, new ImageLoader.Callback() {
-                @Override
-                public void onLoaded(Bitmap bitmap) {
-                    if (coverUrl.equals(h.cover.getTag())) {
-                        h.cover.setImageBitmap(bitmap);
+        if (!coverUrl.equals(h.boundCoverUrl)) {
+            h.boundCoverUrl = coverUrl;
+            h.cover.setTag(coverUrl);
+            h.cover.setImageDrawable(h.mark);
+            if (!coverUrl.isEmpty()) {
+                loader.loadCover(coverUrl, new ImageLoader.Callback() {
+                    @Override
+                    public void onLoaded(Bitmap bitmap) {
+                        if (coverUrl.equals(h.cover.getTag())) {
+                            h.cover.setImageBitmap(bitmap);
+                        }
                     }
-                }
 
-                @Override
-                public void onError(Exception e) {
-                }
-            });
+                    @Override
+                    public void onError(Exception e) {
+                    }
+                });
+            }
         }
 
         h.itemView.setOnClickListener(v -> listener.onClick(a));
@@ -398,6 +402,8 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         ImageView btnDownload;
         ProgressBar downloadProgress;
         View downloadRow;
+        final JmMarkDrawable mark;
+        String boundCoverUrl = "\u0000";
 
         VH(@NonNull View v) {
             super(v);
@@ -411,6 +417,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
             btnDownload = v.findViewById(R.id.btnDownload);
             downloadProgress = v.findViewById(R.id.downloadProgress);
             downloadRow = v.findViewById(R.id.downloadRow);
+            mark = new JmMarkDrawable(v.getContext().getColor(R.color.muted));
         }
     }
 }

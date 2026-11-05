@@ -62,11 +62,9 @@
             android:padding="36dp"
             android:visibility="gone">
 
-            <ImageView
+            <com.moco.comicsearch.JmMarkView
                 android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:src="@drawable/ic_logo"
-                android:contentDescription="@null" />
+                android:layout_height="72dp" />
 
             <TextView
                 android:id="@+id/emptyTitle"
