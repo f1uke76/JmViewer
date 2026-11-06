@@ -30,6 +30,8 @@ public class UpdateChecker {
         public String url = "";
         public String notes = "";
         public String apkUrl = "";
+        /** API 资产地址（Accept: application/octet-stream 直接下载，比 github.com 稳）。 */
+        public String apkApiUrl = "";
     }
 
     public interface Callback {
@@ -100,6 +102,7 @@ public class UpdateChecker {
                         }
                         if (asset.optString("name").endsWith(".apk")) {
                             r.apkUrl = asset.optString("browser_download_url");
+                            r.apkApiUrl = asset.optString("url");
                             break;
                         }
                     }

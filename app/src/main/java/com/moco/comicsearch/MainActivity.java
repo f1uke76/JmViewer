@@ -203,30 +203,12 @@ public class MainActivity extends AppCompatActivity {
         maybeCheckUpdate();
     }
 
-    /** 启动时静默检查更新：开关打开且有新版本时弹窗，关闭时只在关于页留红点。 */
+    /** 启动时静默检查更新：开关打开且有新版本时弹同款更新弹窗。 */
     private void maybeCheckUpdate() {
-        UpdateChecker.check(this, r -> {
+        UpdateManager.check(this, UpdateManager.MODE_AUTO, r -> {
             if (settingsPanel != null) {
                 settingsPanel.refresh();
             }
-            if (isFinishing() || r == null || !r.ok || !r.newer) {
-                return;
-            }
-            if (!prefs.autoCheckUpdate()) {
-                return;
-            }
-            String v = "v" + r.version;
-            if (v.equals(UpdateChecker.promptedVersion)) {
-                return;
-            }
-            UpdateChecker.promptedVersion = v;
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle(getString(R.string.update_available, v))
-                    .setMessage(getString(R.string.update_available_msg,
-                            BuildConfig.VERSION_NAME, r.version))
-                    .setPositiveButton(R.string.go_update, (d, w) -> openUrl(r.url))
-                    .setNegativeButton(R.string.later, null)
-                    .show();
         });
     }
 
