@@ -384,8 +384,9 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int a, int b, int c) {
-                if (s.length() > 0) {
-                    hideSearchHistory();
+                // 展开状态下始终显示搜索记录，边输入边过滤
+                if (searchExpanded) {
+                    showSearchHistory(s.toString());
                 }
             }
 
@@ -1594,10 +1595,21 @@ public class MainActivity extends AppCompatActivity {
     // ------------------------------------------------------------ 搜索历史
 
     private void showSearchHistory() {
+        showSearchHistory(searchInput == null ? "" : searchInput.getText().toString());
+    }
+
+    /** 按当前输入过滤搜索记录，输入为空时显示全部。 */
+    private void showSearchHistory(String filter) {
         if (historyPanel == null) {
             return;
         }
-        List<String> items = prefs.getHistory();
+        final String f = filter == null ? "" : filter.trim().toLowerCase(java.util.Locale.ROOT);
+        List<String> items = new ArrayList<>();
+        for (String q : prefs.getHistory()) {
+            if (f.isEmpty() || q.toLowerCase(java.util.Locale.ROOT).contains(f)) {
+                items.add(q);
+            }
+        }
         if (items.isEmpty()) {
             hideSearchHistory();
             return;

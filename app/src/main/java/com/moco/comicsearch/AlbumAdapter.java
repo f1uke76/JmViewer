@@ -240,11 +240,6 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         h.itemView.setBackgroundResource(selected
                 ? R.drawable.bg_block_selected : R.drawable.bg_block);
         h.title.setText(a.title);
-        // 主题色底上用白字，保证可读
-        h.title.setTextColor(selected ? 0xFFFFFFFF : h.itemView.getContext().getColor(R.color.on_surface));
-        if (h.meta != null) {
-            h.meta.setTextColor(selected ? 0xD9FFFFFF : h.itemView.getContext().getColor(R.color.muted));
-        }
 
         if (h.meta != null) {
             // 统一小字：多少 P + 作品代号（1464578），可选附加信息
@@ -278,7 +273,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
                     if (shown >= 3) {
                         break;
                     }
-                    h.tags.addView(chip(h.tags, tag, selected));
+                    h.tags.addView(chip(h.tags, tag));
                     shown++;
                 }
             }
@@ -363,18 +358,12 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.VH> {
         return Math.round(v.getResources().getDisplayMetrics().density * value);
     }
 
-    private TextView chip(ViewGroup parent, String text, boolean onPrimary) {
+    private TextView chip(ViewGroup parent, String text) {
         TextView tv = new TextView(parent.getContext());
         tv.setText(text);
         tv.setTextSize(10);
-        tv.setTextColor(onPrimary ? 0xE6FFFFFF
-                : parent.getContext().getColor(R.color.muted));
-        if (onPrimary) {
-            // 选中态：透明底 + 半透明白描边，避免浅色 chip 压在主题色上
-            tv.setBackgroundResource(R.drawable.bg_chip_on_primary);
-        } else {
-            tv.setBackgroundResource(R.drawable.bg_chip);
-        }
+        tv.setTextColor(parent.getContext().getColor(R.color.muted));
+        tv.setBackgroundResource(R.drawable.bg_chip);
         int px = (int) (6 * parent.getResources().getDisplayMetrics().density);
         int py = (int) (2 * parent.getResources().getDisplayMetrics().density);
         tv.setPadding(px, py, px, py);

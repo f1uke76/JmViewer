@@ -154,6 +154,37 @@
             android:textSize="12sp" />
 
         <LinearLayout
+            android:id="@+id/rowPublish"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/publish_url"
+                android:textColor="@color/on_surface"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/publishValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/muted"
+                android:textSize="13sp"
+                android:maxWidth="200dp"
+                android:singleLine="true"
+                android:ellipsize="middle" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/rowSite"
             android:layout_width="match_parent"
             android:layout_height="52dp"
@@ -169,7 +200,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/site_url"
+                android:text="@string/mirror_site_url"
                 android:textColor="@color/on_surface"
                 android:textSize="15sp" />
 
@@ -190,7 +221,7 @@
                 android:layout_marginStart="2dp"
                 android:padding="8dp"
                 android:src="@drawable/ic_triangle_down"
-                android:contentDescription="@string/pick_mirror_title"
+                android:contentDescription="@string/mirror_site_url"
                 android:clickable="true"
                 android:focusable="true"
                 android:background="?attr/selectableItemBackgroundBorderless" />

@@ -28,6 +28,8 @@ public class Prefs {
     private static final String KEY_ACCENT = "theme_accent";
     private static final String KEY_ICON_REFRESH = "icon_refresh_version";
     private static final String KEY_AUTO_UPDATE = "auto_check_update";
+    private static final String KEY_OFFICIAL = "official_page";
+    private static final String KEY_MIRROR = "mirror_name";
 
     private static final int MAX_HISTORY = 15;
 
@@ -44,6 +46,35 @@ public class Prefs {
 
     public void setBaseUrl(String url) {
         sp.edit().putString(KEY_BASE, normalize(url)).apply();
+    }
+
+    /** 官方发布页地址（用于读取分流线路）。 */
+    public String getOfficialPage() {
+        String v = sp.getString(KEY_OFFICIAL, Site.OFFICIAL_PAGE);
+        return (v == null || v.trim().isEmpty()) ? Site.OFFICIAL_PAGE : v.trim();
+    }
+
+    public void setOfficialPage(String url) {
+        String v = url == null ? "" : url.trim();
+        if (v.isEmpty()) {
+            v = Site.OFFICIAL_PAGE;
+        } else if (!v.startsWith("http://") && !v.startsWith("https://")) {
+            v = "https://" + v;
+        }
+        while (v.endsWith("/")) {
+            v = v.substring(0, v.length() - 1);
+        }
+        sp.edit().putString(KEY_OFFICIAL, v).apply();
+    }
+
+    /** 手动选中的分流线路（空表示自动）。 */
+    public String getMirrorName() {
+        String v = sp.getString(KEY_MIRROR, "");
+        return v == null ? "" : v;
+    }
+
+    public void setMirrorName(String name) {
+        sp.edit().putString(KEY_MIRROR, name == null ? "" : name).apply();
     }
 
     public boolean adBlock() {

@@ -70,6 +70,8 @@
     <string name="icon_blue">深色蓝镜</string>
     <string name="icon_changed">图标已切换，桌面可能稍后才刷新</string>
     <string name="site_url">站点地址</string>
+    <string name="publish_url">发布页地址</string>
+    <string name="mirror_site_url">分流站点地址</string>
     <string name="site_url_placeholder">https://comic18j-moco.work</string>
     <string name="site_url_helper">换域名时在这里修改，例如 https://comic18j-moco.work</string>
     <string name="ad_block">拦截广告与弹窗</string>

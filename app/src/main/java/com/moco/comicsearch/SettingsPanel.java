@@ -30,6 +30,7 @@ public class SettingsPanel {
     private final TextView accentValue;
     private final TextView viewModeValue;
     private final TextView siteValue;
+    private final TextView publishValue;
     private final TextView cacheManageValue;
     private final TextView aboutVersionValue;
     private final View aboutDot;
@@ -47,6 +48,7 @@ public class SettingsPanel {
         accentValue = root.findViewById(R.id.accentValue);
         viewModeValue = root.findViewById(R.id.viewModeValue);
         siteValue = root.findViewById(R.id.siteValue);
+        publishValue = root.findViewById(R.id.publishValue);
         cacheManageValue = root.findViewById(R.id.cacheManageValue);
         aboutVersionValue = root.findViewById(R.id.aboutVersionValue);
         aboutDot = root.findViewById(R.id.aboutDot);
@@ -55,8 +57,9 @@ public class SettingsPanel {
         root.findViewById(R.id.rowTheme).setOnClickListener(v -> showThemeDialog());
         root.findViewById(R.id.rowAccent).setOnClickListener(v -> showAccentDialog());
         root.findViewById(R.id.rowViewMode).setOnClickListener(v -> showViewModeDialog());
-        root.findViewById(R.id.rowSite).setOnClickListener(v -> showSiteDialog());
-        root.findViewById(R.id.btnMirror).setOnClickListener(v -> MirrorPicker.show(activity, this::applyMirror));
+        root.findViewById(R.id.rowPublish).setOnClickListener(v -> showPublishDialog());
+        root.findViewById(R.id.rowSite).setOnClickListener(v -> pickMirror());
+        root.findViewById(R.id.btnMirror).setOnClickListener(v -> pickMirror());
         root.findViewById(R.id.rowCacheManage).setOnClickListener(v ->
                 activity.startActivity(new Intent(activity, CacheActivity.class)));
         root.findViewById(R.id.rowClearRecords).setOnClickListener(v -> showClearRecordsDialog());
@@ -99,7 +102,8 @@ public class SettingsPanel {
         accentValue.setText(accents[Math.max(0, Math.min(prefs.getThemeAccent(), accents.length - 1))]);
 
         viewModeValue.setText(prefs.getViewMode() == 1 ? R.string.view_grid : R.string.view_list);
-        siteValue.setText(site.base().replace("https://", ""));
+        siteValue.setText(host(site.base()));
+        publishValue.setText(host(prefs.getOfficialPage()));
 
         long size = dirSize(new File(activity.getCacheDir(), "raw"));
         if (cacheManageValue != null) {
@@ -175,35 +179,52 @@ public class SettingsPanel {
                 .show();
     }
 
-    private void showSiteDialog() {
-        View content = activity.getLayoutInflater().inflate(R.layout.dialog_settings, null, false);
-        final EditText input = content.findViewById(R.id.inputBase);
-        input.setText(site.base());
-        input.setSelection(input.getText() == null ? 0 : input.getText().length());
-        content.findViewById(R.id.cbAdBlock).setVisibility(View.GONE);
-        content.findViewById(R.id.btnClearHistory).setVisibility(View.GONE);
-        content.findViewById(R.id.rowWebMode).setVisibility(View.GONE);
-        content.findViewById(R.id.btnMirrorDrop).setVisibility(View.GONE);
+    /** 只保留发布页地址可编辑；站点地址由分流结果决定，不再手填。 */
+    private void showPublishDialog() {
+        final EditText input = new EditText(activity);
+        input.setSingleLine(true);
+        input.setText(prefs.getOfficialPage());
+        input.setSelection(input.getText().length());
+        int pad = (int) (20 * activity.getResources().getDisplayMetrics().density);
+        input.setPadding(pad, pad, pad, pad);
 
         new MaterialAlertDialogBuilder(activity)
-                .setTitle(R.string.site_url)
-                .setView(content)
+                .setTitle(R.string.publish_url)
+                .setView(input)
                 .setPositiveButton(R.string.save, (d, w) -> {
-                    prefs.setBaseUrl(input.getText() == null ? "" : input.getText().toString());
+                    prefs.setOfficialPage(input.getText() == null ? "" : input.getText().toString());
                     refresh();
-                    Toast.makeText(activity, site.base(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, host(prefs.getOfficialPage()), Toast.LENGTH_SHORT).show();
                 })
                 .setNeutralButton(R.string.reset_default, (d, w) -> {
-                    prefs.setBaseUrl(Prefs.DEFAULT_BASE_URL);
+                    prefs.setOfficialPage(Site.OFFICIAL_PAGE);
                     refresh();
-                    Toast.makeText(activity, site.base(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, host(prefs.getOfficialPage()), Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.cancel, null)
                 .show();
     }
 
+    /** 展示用：去掉协议和末尾斜杠。 */
+    private static String host(String url) {
+        if (url == null) {
+            return "";
+        }
+        String v = url.trim().replaceFirst("^https?://", "");
+        while (v.endsWith("/")) {
+            v = v.substring(0, v.length() - 1);
+        }
+        return v;
+    }
+
+    /** 从官方发布页读取线路后下拉选择。 */
+    private void pickMirror() {
+        MirrorPicker.show(activity, this::applyMirror);
+    }
+
     private void applyMirror(Models.Mirror m) {
         prefs.setBaseUrl("https://" + m.host);
+        prefs.setMirrorName(m.host);
         refresh();
         Toast.makeText(activity, activity.getString(R.string.mirror_switched, m.host),
                 Toast.LENGTH_SHORT).show();

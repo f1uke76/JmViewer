@@ -231,10 +231,11 @@ public class Site {
 
     /** 抓取官方发布页（内含各分流线路）。 */
     public String getOfficialPage() throws IOException {
+        final String page = prefs.getOfficialPage();
         Request req = new Request.Builder()
-                .url(OFFICIAL_PAGE)
+                .url(page)
                 .header("User-Agent", UA)
-                .header("Referer", OFFICIAL_PAGE + "/")
+                .header("Referer", page + "/")
                 .build();
         try (Response resp = quickClient.newCall(req).execute()) {
             if (resp.body() == null) {

@@ -102,6 +102,7 @@ public class SmokeTest {
         Activity a = c.get();
         assertNotNull(a.findViewById(R.id.rowTheme));
         assertNotNull(a.findViewById(R.id.rowViewMode));
+        assertNotNull(a.findViewById(R.id.rowPublish));
         assertNotNull(a.findViewById(R.id.rowSite));
         assertNotNull(a.findViewById(R.id.btnMirror));
         assertNotNull(a.findViewById(R.id.rowHomeRecommend));
@@ -178,13 +179,8 @@ public class SmokeTest {
     }
 
     @Test
-    public void settings_dialog_inflates() {
+    public void drawer_settings_entry_exists() {
         MainActivity a = Robolectric.buildActivity(MainActivity.class).setup().get();
-        View content = a.getLayoutInflater().inflate(R.layout.dialog_settings, null, false);
-        assertNotNull("缺少地址输入框", content.findViewById(R.id.inputBase));
-        assertNotNull("缺少分流下拉按钮", content.findViewById(R.id.btnMirrorDrop));
-        assertNotNull("缺少原网页开关", content.findViewById(R.id.swWebMode));
-        // 抽屉里的「设置」入口存在
         assertNotNull("缺少侧边栏设置入口", a.findViewById(R.id.navSettings));
     }
 
