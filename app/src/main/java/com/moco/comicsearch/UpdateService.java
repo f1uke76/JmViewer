@@ -81,6 +81,9 @@ public class UpdateService extends Service {
         //noinspection ResultOfMethodCallIgnored
         dir.mkdirs();
         File out = new File(dir, "JmViewer-" + (version.isEmpty() ? "latest" : version) + ".apk");
+        // 旧包可能是不完整的，先清掉
+        //noinspection ResultOfMethodCallIgnored
+        out.delete();
 
         String error = null;
         try {
@@ -94,18 +97,35 @@ public class UpdateService extends Service {
             if (url == null || url.isEmpty()) {
                 throw new IOException(getString(R.string.update_no_apk));
             }
-            try {
-                fetch(url, out);
-            } catch (Exception first) {
-                // 首选地址失败时，再按 tag 查一次资产地址
-                String retry = resolveAssetUrl(version);
-                if (retry == null || retry.isEmpty() || retry.equals(url)) {
-                    throw first;
+
+            // 断点续传 + 最多 4 次重试：GitHub 资源经常几十 KB/s 且会中途断开
+            IOException last = null;
+            for (int attempt = 1; attempt <= 4; attempt++) {
+                try {
+                    fetch(url, out);
+                    last = null;
+                    break;
+                } catch (IOException e) {
+                    last = e;
+                    if (attempt == 4) {
+                        throw e;
+                    }
+                    try {
+                        Thread.sleep(1500);
+                    } catch (InterruptedException ignored) {
+                    }
                 }
-                fetch(retry, out);
+            }
+            if (last != null) {
+                throw last;
+            }
+            if (!isApk(out)) {
+                throw new IOException("安装包不完整");
             }
         } catch (Exception e) {
             error = e.getMessage() == null ? e.toString() : e.getMessage();
+            //noinspection ResultOfMethodCallIgnored
+            out.delete();
         }
 
         final String err = error;
@@ -162,7 +182,9 @@ public class UpdateService extends Service {
         return "";
     }
 
+    /** 下载到文件；文件已存在时用 Range 续传。 */
     private void fetch(String url, File out) throws IOException {
+        long have = out.exists() ? out.length() : 0;
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setInstanceFollowRedirects(true);
         // GitHub 资源服务器在国内经常只有几十 KB/s，超时放宽，靠通知栏进度提示
@@ -171,17 +193,30 @@ public class UpdateService extends Service {
         conn.setRequestProperty("User-Agent", "JmViewer/" + BuildConfig.VERSION_NAME);
         conn.setRequestProperty("Accept", "application/octet-stream, */*");
         conn.setRequestProperty("Accept-Encoding", "identity");
-        int code = conn.getResponseCode();
-        if (code != 200) {
+        if (have > 0) {
+            conn.setRequestProperty("Range", "bytes=" + have + "-");
+        }
+
+        final int code = conn.getResponseCode();
+        final boolean append;
+        final long total;
+        if (code == 206) {
+            total = have + conn.getContentLengthLong();
+            append = true;
+        } else if (code == 200) {
+            have = 0;
+            total = conn.getContentLengthLong();
+            append = false;
+        } else {
             conn.disconnect();
             throw new IOException("HTTP " + code);
         }
-        long total = conn.getContentLengthLong();
-        long done = 0;
+
+        long done = have;
         int lastPct = -1;
         long lastTick = 0;
         try (InputStream in = conn.getInputStream();
-             OutputStream os = new FileOutputStream(out)) {
+             OutputStream os = new FileOutputStream(out, append)) {
             byte[] buf = new byte[32768];
             int n;
             while ((n = in.read(buf)) > 0) {
@@ -200,8 +235,36 @@ public class UpdateService extends Service {
         } finally {
             conn.disconnect();
         }
-        if (out.length() <= 0) {
-            throw new IOException("empty file");
+        if (total > 0 && done != total) {
+            throw new IOException("下载不完整 " + done + "/" + total);
+        }
+    }
+
+    /** APK 本质是 zip：校验文件头 + 末尾目录，半截文件会缺 EOCD。 */
+    private boolean isApk(File f) {
+        if (!f.isFile() || f.length() < 100 * 1024) {
+            return false;
+        }
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(f, "r")) {
+            byte[] head = new byte[4];
+            raf.readFully(head);
+            if (!(head[0] == 0x50 && head[1] == 0x4B && head[2] == 0x03 && head[3] == 0x04)) {
+                return false;
+            }
+            long len = raf.length();
+            int tailLen = (int) Math.min(66000L, len);
+            byte[] tail = new byte[tailLen];
+            raf.seek(len - tailLen);
+            raf.readFully(tail);
+            for (int i = tailLen - 4; i >= 0; i--) {
+                if (tail[i] == 0x50 && tail[i + 1] == 0x4B
+                        && tail[i + 2] == 0x05 && tail[i + 3] == 0x06) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
         }
     }
 
