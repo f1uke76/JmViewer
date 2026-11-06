@@ -216,15 +216,13 @@
 
             <ImageView
                 android:id="@+id/btnMirror"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="2dp"
-                android:padding="8dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="4dp"
                 android:src="@drawable/ic_triangle_down"
                 android:contentDescription="@string/mirror_site_url"
                 android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackgroundBorderless" />
+                android:focusable="true" />
         </LinearLayout>
 
         <TextView
