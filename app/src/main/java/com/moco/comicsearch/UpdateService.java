@@ -26,9 +26,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -129,10 +133,12 @@ public class UpdateService extends Service {
                 chunked(primary, probe, out);
             }
 
-            if (probe.total > 0 && out.length() != probe.total) {
+            final boolean sizeOk = probe.total > 0 && out.length() == probe.total;
+            if (probe.total > 0 && !sizeOk) {
                 throw new IOException("下载不完整 " + out.length() + "/" + probe.total);
             }
-            if (!validApk(out)) {
+            // 长度对得上就等于拿到了完整资产；长度未知时再用系统解析兜底
+            if (!isApk(out) || (!sizeOk && !parsable(out))) {
                 throw new IOException("安装包不完整（" + out.length() + " 字节）");
             }
         } catch (Exception e) {
@@ -189,64 +195,122 @@ public class UpdateService extends Service {
         return p;
     }
 
-    /** 分块下载：单块失败只补这一块。 */
+    /**
+     * 分块下载：4 个线程各取一块并发下（单连接被限速，并发能快好几倍），
+     * 每块失败单独重试；整体失败再退回一次性下载。
+     */
     private void chunked(String origin, Probe probe, File out) throws IOException {
-        String url = probe.url;
-        long total = probe.total;
-        long have = 0;
-        int fails = 0;
-        int lastPct = -1;
-        long lastTick = 0;
+        final long total = probe.total;
+        if (total <= 0) {
+            singleShot(origin, out);
+            return;
+        }
+        try {
+            parallel(probe.url, out, total);
+        } catch (IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            out.delete();
+            singleShot(origin, out);
+        }
+    }
 
-        while (total <= 0 || have < total) {
-            long end = have + CHUNK - 1;
-            if (total > 0) {
-                end = Math.min(end, total - 1);
-            }
-            long got;
-            try {
-                got = fetchRange(url, out, have, end);
-            } catch (IOException e) {
-                got = -2;
-            }
-            if (got <= 0) {
-                if (got == -1) {
-                    // 416：已经下完
-                    break;
-                }
-                fails++;
-                if (fails > MAX_FAIL) {
-                    throw new IOException("下载中断 " + have + "/" + total);
-                }
-                try {
-                    Thread.sleep(Math.min(4000L, 600L * fails));
-                } catch (InterruptedException ignored) {
-                }
-                if (fails % 3 == 0) {
-                    // 签名地址可能过期，重新探测
-                    Probe again = probe(origin);
-                    if (!again.url.isEmpty()) {
-                        url = again.url;
-                        if (again.total > 0) {
-                            total = again.total;
+    private void parallel(String url, File out, long total) throws IOException {
+        final int threads = 4;
+        final int count = (int) ((total + CHUNK - 1) / CHUNK);
+
+        // 先按总长度占位，各线程按偏移写自己的区间
+        try (RandomAccessFile raf = new RandomAccessFile(out, "rw")) {
+            raf.setLength(total);
+        }
+
+        final AtomicInteger next = new AtomicInteger(0);
+        final AtomicLong done = new AtomicLong(0);
+        final AtomicInteger lastPct = new AtomicInteger(-1);
+        final AtomicReference<String> failure = new AtomicReference<>(null);
+
+        Thread[] workers = new Thread[threads];
+        for (int t = 0; t < threads; t++) {
+            workers[t] = new Thread(() -> {
+                while (failure.get() == null) {
+                    int idx = next.getAndIncrement();
+                    if (idx >= count) {
+                        return;
+                    }
+                    final long start = (long) idx * CHUNK;
+                    final long end = Math.min(start + CHUNK - 1, total - 1);
+                    final long want = end - start + 1;
+                    boolean ok = false;
+                    for (int attempt = 1; attempt <= 5 && failure.get() == null; attempt++) {
+                        if (fetchChunk(url, out, start, end, want)) {
+                            ok = true;
+                            break;
+                        }
+                        try {
+                            Thread.sleep(400L * attempt);
+                        } catch (InterruptedException ignored) {
                         }
                     }
+                    if (!ok) {
+                        failure.compareAndSet(null, "下载中断 " + done.get() + "/" + total);
+                        return;
+                    }
+                    long now = done.addAndGet(want);
+                    int pct = (int) (now * 100 / total);
+                    if (pct != lastPct.getAndSet(pct)) {
+                        updateProgress(pct, true);
+                    }
                 }
-                continue;
+            }, "update-chunk-" + t);
+            workers[t].start();
+        }
+        for (Thread w : workers) {
+            try {
+                w.join();
+            } catch (InterruptedException ignored) {
             }
-            fails = 0;
-            have = out.length();
-            long now = System.currentTimeMillis();
-            if (total > 0 && now - lastTick > 300) {
-                int pct = (int) (have * 100 / total);
-                if (pct != lastPct) {
-                    lastPct = pct;
-                    lastTick = now;
-                    updateProgress(pct, true);
+        }
+        String err = failure.get();
+        if (err != null) {
+            throw new IOException(err);
+        }
+        if (out.length() != total) {
+            throw new IOException("下载不完整 " + out.length() + "/" + total);
+        }
+    }
+
+    /** 下载一个区间并写到对应偏移；成功返回 true。 */
+    private boolean fetchChunk(String url, File out, long start, long end, long want) {
+        HttpURLConnection conn = null;
+        try {
+            conn = open(url, "bytes=" + start + "-" + end, 45000);
+            final int code = conn.getResponseCode();
+            if (code == 416) {
+                return true;
+            }
+            if (code != 206 || isJson(conn)) {
+                // 200 表示服务端忽略了 Range，交给整段下载处理
+                return false;
+            }
+            try (InputStream in = conn.getInputStream();
+                 RandomAccessFile raf = new RandomAccessFile(out, "rw")) {
+                raf.seek(start);
+                byte[] buf = new byte[16384];
+                int n;
+                long got = 0;
+                while ((n = in.read(buf)) > 0) {
+                    raf.write(buf, 0, n);
+                    got += n;
+                    if (got >= want) {
+                        break;
+                    }
                 }
+                return got == want;
             }
-            if (total <= 0) {
-                break;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
             }
         }
     }
@@ -409,11 +473,8 @@ public class UpdateService extends Service {
         return "https://github.com/f1uke76/JmViewer/releases/download/v" + version + "/" + name;
     }
 
-    /** APK 校验：zip 头 + 末尾目录 + 系统能否解析包信息。 */
-    private boolean validApk(File f) {
-        if (!isApk(f)) {
-            return false;
-        }
+    /** 系统能否把文件解析成安装包。 */
+    private boolean parsable(File f) {
         try {
             PackageInfo info = getPackageManager().getPackageArchiveInfo(f.getAbsolutePath(), 0);
             return info != null && info.packageName != null;
