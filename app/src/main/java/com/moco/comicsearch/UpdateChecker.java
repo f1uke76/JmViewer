@@ -39,6 +39,8 @@ public class UpdateChecker {
     }
 
     private static volatile Result latest;
+    /** 最近一次检查结果，供下载失败后的「重试」复用地址。 */
+    public static volatile Result lastResult;
     /** 已经弹过更新提示的版本，避免反复打扰。 */
     public static volatile String promptedVersion = "";
 
@@ -65,6 +67,9 @@ public class UpdateChecker {
             }
             final Result result = r;
             latest = result;
+            if (result != null && result.ok) {
+                lastResult = result;
+            }
             MAIN.post(() -> cb.onResult(result));
         }, "update-check").start();
     }

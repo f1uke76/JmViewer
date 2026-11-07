@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -20,21 +21,24 @@ import androidx.core.content.FileProvider;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/** 前台服务下载更新包：通知栏显示进度，完成后可直接安装。 */
+/**
+ * 前台服务下载更新包。
+ *
+ * GitHub 的发布资源在国内是几十 KB/s 且经常中途被掐断，一次性下载 5MB 很容易拿到半截文件。
+ * 这里改成：先探测一次拿到真实 CDN 地址和总大小，然后按 256KB 分块 Range 下载，
+ * 单块失败只重试这一块，最后校验文件长度 + zip 结构 + PackageManager 能否解析。
+ */
 public class UpdateService extends Service {
 
     public static final String EXTRA_API = "api_url";
@@ -43,10 +47,19 @@ public class UpdateService extends Service {
 
     private static final String CHANNEL = "update_download";
     private static final int NOTIF_ID = 1001;
-    private static final String API_TAG =
-            "https://api.github.com/repos/f1uke76/JmViewer/releases/tags/v";
+
+    private static final int CHUNK = 256 * 1024;
+    private static final int MAX_FAIL = 10;
+
+    private static final Pattern TOTAL = Pattern.compile("/\\s*(\\d+)\\s*$");
+
+    private static volatile boolean running;
 
     private final Handler main = new Handler(Looper.getMainLooper());
+
+    public static boolean isRunning() {
+        return running;
+    }
 
     public static void start(Context ctx, String apiUrl, String browserUrl, String version) {
         Intent i = new Intent(ctx, UpdateService.class)
@@ -70,11 +83,27 @@ public class UpdateService extends Service {
         startForeground(NOTIF_ID, progressNotification(
                 getString(R.string.update_downloading), 0, 0, true));
 
-        new Thread(() -> download(apiUrl, browserUrl, version), "update-download").start();
+        if (running) {
+            return START_NOT_STICKY;
+        }
+        running = true;
+        new Thread(() -> {
+            try {
+                download(apiUrl, browserUrl, version);
+            } finally {
+                running = false;
+            }
+        }, "update-download").start();
         return START_NOT_STICKY;
     }
 
     // ------------------------------------------------------------ 下载
+
+    /** 探测结果：跟随跳转后的真实地址 + 文件总大小（未知为 0）。 */
+    private static final class Probe {
+        String url = "";
+        long total;
+    }
 
     private void download(String apiUrl, String browserUrl, String version) {
         File dir = new File(getCacheDir(), "update");
@@ -87,40 +116,24 @@ public class UpdateService extends Service {
 
         String error = null;
         try {
-            String url = apiUrl;
-            if (url == null || url.isEmpty()) {
-                url = browserUrl;
-            }
-            if (url == null || url.isEmpty()) {
-                url = resolveAssetUrl(version);
-            }
-            if (url == null || url.isEmpty()) {
+            String primary = first(apiUrl, browserUrl, browserAssetUrl(version));
+            if (primary.isEmpty()) {
                 throw new IOException(getString(R.string.update_no_apk));
             }
 
-            // 断点续传 + 最多 4 次重试：GitHub 资源经常几十 KB/s 且会中途断开
-            IOException last = null;
-            for (int attempt = 1; attempt <= 4; attempt++) {
-                try {
-                    fetch(url, out);
-                    last = null;
-                    break;
-                } catch (IOException e) {
-                    last = e;
-                    if (attempt == 4) {
-                        throw e;
-                    }
-                    try {
-                        Thread.sleep(1500);
-                    } catch (InterruptedException ignored) {
-                    }
-                }
+            Probe probe = probe(primary);
+            if (probe.url.isEmpty()) {
+                // 探测失败（网络抖动）：退回一次性下载
+                singleShot(primary, out);
+            } else {
+                chunked(primary, probe, out);
             }
-            if (last != null) {
-                throw last;
+
+            if (probe.total > 0 && out.length() != probe.total) {
+                throw new IOException("下载不完整 " + out.length() + "/" + probe.total);
             }
-            if (!isApk(out)) {
-                throw new IOException("安装包不完整");
+            if (!validApk(out)) {
+                throw new IOException("安装包不完整（" + out.length() + " 字节）");
             }
         } catch (Exception e) {
             error = e.getMessage() == null ? e.toString() : e.getMessage();
@@ -133,110 +146,279 @@ public class UpdateService extends Service {
             if (err == null) {
                 onDownloaded(out, version);
             } else {
-                onFailed(err);
+                onFailed(err, version);
             }
         });
     }
 
-    /** 通过 API 查 tag 对应的 apk 资产地址（api 域名通常比 github.com 稳定）。 */
-    private String resolveAssetUrl(String version) {
-        if (version == null || version.isEmpty()) {
-            return "";
-        }
+    /** 一次请求拿到跳转后的真实地址和总大小（api 域名只打一次，避免触发限流）。 */
+    private Probe probe(String url) {
+        return probe(url, true);
+    }
+
+    private Probe probe(String url, boolean allowJson) {
+        Probe p = new Probe();
         HttpURLConnection conn = null;
         try {
-            conn = (HttpURLConnection) new URL(API_TAG + version).openConnection();
-            conn.setConnectTimeout(15000);
-            conn.setReadTimeout(15000);
-            conn.setRequestProperty("User-Agent", "JmViewer/" + BuildConfig.VERSION_NAME);
-            conn.setRequestProperty("Accept", "application/vnd.github+json");
-            if (conn.getResponseCode() != 200) {
-                return "";
-            }
-            StringBuilder sb = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(
-                    conn.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    sb.append(line);
+            conn = open(url, "bytes=0-0", 20000);
+            final int code = conn.getResponseCode();
+            if (isJson(conn)) {
+                // API 返回的是资产元信息：取真实下载地址再探一次
+                String alt = readJsonUrl(conn);
+                conn.disconnect();
+                conn = null;
+                if (allowJson && !alt.isEmpty() && !alt.equals(url)) {
+                    return probe(alt, false);
                 }
+                return p;
             }
-            JSONObject o = new JSONObject(sb.toString());
-            JSONArray assets = o.optJSONArray("assets");
-            if (assets == null) {
-                return "";
+            if (code == 206) {
+                p.total = parseTotal(conn.getHeaderField("Content-Range"));
+            } else if (code == 200) {
+                p.total = conn.getContentLengthLong();
+            } else {
+                return p;
             }
-            for (int i = 0; i < assets.length(); i++) {
-                JSONObject a = assets.optJSONObject(i);
-                if (a != null && a.optString("name").endsWith(".apk")) {
-                    String api = a.optString("url");
-                    return api.isEmpty() ? a.optString("browser_download_url") : api;
-                }
-            }
+            p.url = conn.getURL().toString();
         } catch (Exception ignored) {
         } finally {
             if (conn != null) {
                 conn.disconnect();
             }
         }
-        return "";
+        return p;
     }
 
-    /** 下载到文件；文件已存在时用 Range 续传。 */
-    private void fetch(String url, File out) throws IOException {
-        long have = out.exists() ? out.length() : 0;
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.setInstanceFollowRedirects(true);
-        // GitHub 资源服务器在国内经常只有几十 KB/s，超时放宽，靠通知栏进度提示
-        conn.setConnectTimeout(30000);
-        conn.setReadTimeout(60000);
-        conn.setRequestProperty("User-Agent", "JmViewer/" + BuildConfig.VERSION_NAME);
-        conn.setRequestProperty("Accept", "application/octet-stream, */*");
-        conn.setRequestProperty("Accept-Encoding", "identity");
-        if (have > 0) {
-            conn.setRequestProperty("Range", "bytes=" + have + "-");
-        }
-
-        final int code = conn.getResponseCode();
-        final boolean append;
-        final long total;
-        if (code == 206) {
-            total = have + conn.getContentLengthLong();
-            append = true;
-        } else if (code == 200) {
-            have = 0;
-            total = conn.getContentLengthLong();
-            append = false;
-        } else {
-            conn.disconnect();
-            throw new IOException("HTTP " + code);
-        }
-
-        long done = have;
+    /** 分块下载：单块失败只补这一块。 */
+    private void chunked(String origin, Probe probe, File out) throws IOException {
+        String url = probe.url;
+        long total = probe.total;
+        long have = 0;
+        int fails = 0;
         int lastPct = -1;
         long lastTick = 0;
-        try (InputStream in = conn.getInputStream();
-             OutputStream os = new FileOutputStream(out, append)) {
-            byte[] buf = new byte[32768];
-            int n;
-            while ((n = in.read(buf)) > 0) {
-                os.write(buf, 0, n);
-                done += n;
-                long now = System.currentTimeMillis();
-                if (now - lastTick > 400) {
+
+        while (total <= 0 || have < total) {
+            long end = have + CHUNK - 1;
+            if (total > 0) {
+                end = Math.min(end, total - 1);
+            }
+            long got;
+            try {
+                got = fetchRange(url, out, have, end);
+            } catch (IOException e) {
+                got = -2;
+            }
+            if (got <= 0) {
+                if (got == -1) {
+                    // 416：已经下完
+                    break;
+                }
+                fails++;
+                if (fails > MAX_FAIL) {
+                    throw new IOException("下载中断 " + have + "/" + total);
+                }
+                try {
+                    Thread.sleep(Math.min(4000L, 600L * fails));
+                } catch (InterruptedException ignored) {
+                }
+                if (fails % 3 == 0) {
+                    // 签名地址可能过期，重新探测
+                    Probe again = probe(origin);
+                    if (!again.url.isEmpty()) {
+                        url = again.url;
+                        if (again.total > 0) {
+                            total = again.total;
+                        }
+                    }
+                }
+                continue;
+            }
+            fails = 0;
+            have = out.length();
+            long now = System.currentTimeMillis();
+            if (total > 0 && now - lastTick > 300) {
+                int pct = (int) (have * 100 / total);
+                if (pct != lastPct) {
+                    lastPct = pct;
                     lastTick = now;
-                    int pct = total > 0 ? (int) (done * 100 / total) : 0;
-                    if (pct != lastPct) {
-                        lastPct = pct;
-                        updateProgress(pct, total > 0);
+                    updateProgress(pct, true);
+                }
+            }
+            if (total <= 0) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * 取 [start, end] 区间写入文件末尾。
+     * 返回写入字节数；返回 -1 表示服务端说已超出范围（416）；返回 -2 由调用方当作失败。
+     */
+    private long fetchRange(String url, File out, long start, long end) throws IOException {
+        HttpURLConnection conn = null;
+        try {
+            conn = open(url, "bytes=" + start + "-" + end, 45000);
+            final int code = conn.getResponseCode();
+            if (code == 416) {
+                return -1;
+            }
+            if (isJson(conn)) {
+                throw new IOException("接口返回元信息，不是安装包");
+            }
+            if (code != 206 && code != 200) {
+                throw new IOException("HTTP " + code);
+            }
+            final boolean append = code == 206;
+            final long want = end - start + 1;
+            long got = 0;
+            try (InputStream in = conn.getInputStream();
+                 OutputStream os = new FileOutputStream(out, append)) {
+                byte[] buf = new byte[16384];
+                int n;
+                while ((n = in.read(buf)) > 0) {
+                    os.write(buf, 0, n);
+                    got += n;
+                    if (append && got >= want) {
+                        break;
+                    }
+                }
+            }
+            if (got <= 0) {
+                return -2;
+            }
+            return got;
+        } catch (IOException e) {
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    /** 探测失败时的兜底：整段下载（能下多少算多少，靠后续校验判断）。 */
+    private void singleShot(String url, File out) throws IOException {
+        HttpURLConnection conn = null;
+        try {
+            conn = open(url, null, 60000);
+            final int code = conn.getResponseCode();
+            if (code != 200 && code != 206) {
+                throw new IOException("HTTP " + code);
+            }
+            if (isJson(conn)) {
+                throw new IOException("接口返回元信息，不是安装包");
+            }
+            try (InputStream in = conn.getInputStream();
+                 OutputStream os = new FileOutputStream(out, false)) {
+                byte[] buf = new byte[32768];
+                int n;
+                long done = 0;
+                long total = conn.getContentLengthLong();
+                long lastTick = 0;
+                while ((n = in.read(buf)) > 0) {
+                    os.write(buf, 0, n);
+                    done += n;
+                    long now = System.currentTimeMillis();
+                    if (total > 0 && now - lastTick > 300) {
+                        lastTick = now;
+                        updateProgress((int) (done * 100 / total), true);
                     }
                 }
             }
         } finally {
-            conn.disconnect();
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
-        if (total > 0 && done != total) {
-            throw new IOException("下载不完整 " + done + "/" + total);
+    }
+
+    private HttpURLConnection open(String url, String range, int readTimeout) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.setInstanceFollowRedirects(true);
+        conn.setConnectTimeout(20000);
+        conn.setReadTimeout(readTimeout);
+        conn.setUseCaches(false);
+        conn.setRequestProperty("User-Agent", "JmViewer/" + BuildConfig.VERSION_NAME);
+        // 必须精确匹配：带上 ", */*" 时 GitHub 会返回 JSON 元信息而不是安装包
+        conn.setRequestProperty("Accept", "application/octet-stream");
+        // 关掉压缩，避免进度按压缩后字节算不准
+        conn.setRequestProperty("Accept-Encoding", "identity");
+        if (range != null) {
+            conn.setRequestProperty("Range", range);
+        }
+        return conn;
+    }
+
+    private static boolean isJson(HttpURLConnection conn) {
+        String ct = conn.getContentType();
+        return ct != null && ct.toLowerCase(Locale.ROOT).contains("json");
+    }
+
+    /** 从资产元信息里取真实下载地址。 */
+    private static String readJsonUrl(HttpURLConnection conn) {
+        try (InputStream in = conn.getInputStream()) {
+            byte[] buf = new byte[8192];
+            StringBuilder sb = new StringBuilder();
+            int n;
+            while ((n = in.read(buf)) > 0 && sb.length() < 65536) {
+                sb.append(new String(buf, 0, n, "UTF-8"));
+            }
+            String body = sb.toString();
+            int i = body.indexOf("\"browser_download_url\"");
+            if (i < 0) {
+                return "";
+            }
+            int q1 = body.indexOf('"', i + 22);
+            int q2 = q1 < 0 ? -1 : body.indexOf('"', q1 + 1);
+            return (q1 < 0 || q2 < 0) ? "" : body.substring(q1 + 1, q2);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private static long parseTotal(String contentRange) {
+        if (contentRange == null) {
+            return 0;
+        }
+        Matcher m = TOTAL.matcher(contentRange);
+        if (m.find()) {
+            try {
+                return Long.parseLong(m.group(1));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0;
+    }
+
+    private static String first(String... values) {
+        for (String v : values) {
+            if (v != null && !v.trim().isEmpty()) {
+                return v.trim();
+            }
+        }
+        return "";
+    }
+
+    /** 用 tag 拼出浏览器下载地址，作为 api 之外的兜底。 */
+    private static String browserAssetUrl(String version) {
+        if (version == null || version.isEmpty()) {
+            return "";
+        }
+        String name = "JmViewer-v" + version + ".apk";
+        return "https://github.com/f1uke76/JmViewer/releases/download/v" + version + "/" + name;
+    }
+
+    /** APK 校验：zip 头 + 末尾目录 + 系统能否解析包信息。 */
+    private boolean validApk(File f) {
+        if (!isApk(f)) {
+            return false;
+        }
+        try {
+            PackageInfo info = getPackageManager().getPackageArchiveInfo(f.getAbsolutePath(), 0);
+            return info != null && info.packageName != null;
+        } catch (Throwable t) {
+            return false;
         }
     }
 
@@ -306,7 +488,7 @@ public class UpdateService extends Service {
         }
     }
 
-    private void onFailed(String error) {
+    private void onFailed(String error, String version) {
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm != null) {
             nm.notify(NOTIF_ID, baseBuilder()
@@ -321,9 +503,36 @@ public class UpdateService extends Service {
         stopSelf();
 
         Activity a = App.current();
-        if (a != null) {
-            Ui.toast(a, getString(R.string.update_download_failed) + "：" + error);
+        if (a == null) {
+            return;
         }
+        new MaterialAlertDialogBuilder(a)
+                .setTitle(getString(R.string.update_download_failed))
+                .setMessage(error)
+                .setPositiveButton(R.string.retry, (d, w) -> {
+                    UpdateChecker.Result r = UpdateChecker.lastResult;
+                    String api = r == null ? "" : r.apkApiUrl;
+                    String browser = r == null ? "" : r.apkUrl;
+                    if ((browser == null || browser.isEmpty()) && version != null
+                            && !version.isEmpty()) {
+                        browser = browserAssetUrl(version);
+                    }
+                    start(a, api, browser, version);
+                    Ui.toast(a, a.getString(R.string.update_downloading));
+                })
+                .setNeutralButton(R.string.update_on_github, (d, w) -> {
+                    try {
+                        String url = UpdateChecker.LATEST_PAGE;
+                        UpdateChecker.Result r = UpdateChecker.lastResult;
+                        if (r != null && r.url != null && !r.url.isEmpty()) {
+                            url = r.url;
+                        }
+                        a.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                    } catch (Exception ignored) {
+                    }
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
     }
 
     private PendingIntent installPendingIntent(File apk) {
